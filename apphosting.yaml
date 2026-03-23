@@ -1,0 +1,27 @@
+runConfig:
+  minInstances: 0
+  maxInstances: 10
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+
+env:
+  - variable: FIREBASE_PROJECT_ID
+    value: fathai-d90bc
+
+  - variable: CAMPAIGN_TARGET_UZS
+    value: "500000000"
+
+  - variable: USD_UZS_RATE
+    value: "12700"
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: fathai-d90bc
+
+  # Quyidagi secret'larni Firebase Console > App Hosting > Secrets bo'limida qo'shing:
+  # ADMIN_SECRET
+  # FIREBASE_SERVICE_ACCOUNT_JSON
+  # COPYTRADE_STATS_URL
+  # FATH_WEBSITE_STATS_URL
+  # PDF_STATS_URL
+  # TICKNOTE_STATS_URL

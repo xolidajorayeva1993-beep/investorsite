@@ -1,0 +1,791 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import type { AggregatedStats, FundraisingStatus } from "@/lib/types";
+
+type HubData = {
+  success: boolean;
+  stats: AggregatedStats;
+  fundraising: FundraisingStatus;
+};
+
+/* ═══ BIZNES KONSTANTALAR ═══ */
+const CREATOR_PCT = 20;          // Yaratuvchi doim 20%
+const INVESTOR_POOL_PCT = 80;    // Investorlarga 80%
+const PRESETS = [5_000_000, 10_000_000, 25_000_000, 50_000_000, 100_000_000];
+
+function fmtUzs(n: number): string {
+  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + " mlrd";
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + " mln";
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + " ming";
+  return n.toLocaleString();
+}
+function fmtMoney(n: number): string {
+  return n.toLocaleString("uz-UZ");
+}
+
+/* ═══ PIE CHART (SVG) ═══ */
+function PieChart({
+  creatorPct,
+  investorPct,
+  yourPct,
+  size = 200,
+}: {
+  creatorPct: number;
+  investorPct: number;
+  yourPct: number;
+  size?: number;
+}) {
+  const r = size / 2;
+  const cx = r;
+  const cy = r;
+  const ir = r * 0.55; // donut inner radius
+
+  function arc(startPct: number, endPct: number) {
+    const s = (startPct / 100) * 360 - 90;
+    const e = (endPct / 100) * 360 - 90;
+    const sRad = (s * Math.PI) / 180;
+    const eRad = (e * Math.PI) / 180;
+    const large = endPct - startPct > 50 ? 1 : 0;
+    return [
+      `M ${cx + ir * Math.cos(sRad)} ${cy + ir * Math.sin(sRad)}`,
+      `L ${cx + r * Math.cos(sRad)} ${cy + r * Math.sin(sRad)}`,
+      `A ${r} ${r} 0 ${large} 1 ${cx + r * Math.cos(eRad)} ${cy + r * Math.sin(eRad)}`,
+      `L ${cx + ir * Math.cos(eRad)} ${cy + ir * Math.sin(eRad)}`,
+      `A ${ir} ${ir} 0 ${large} 0 ${cx + ir * Math.cos(sRad)} ${cy + ir * Math.sin(sRad)}`,
+      "Z",
+    ].join(" ");
+  }
+
+  const otherInvestorsPct = Math.max(0, investorPct - yourPct);
+  const s1 = 0;
+  const e1 = creatorPct;
+  const s2 = e1;
+  const e2 = e1 + otherInvestorsPct;
+  const s3 = e2;
+  const e3 = e2 + yourPct;
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* yaratuvchi */}
+      {creatorPct > 0.3 && (
+        <path d={arc(s1, e1)} fill="#BF5AF2" opacity={0.85} />
+      )}
+      {/* boshqa investorlar */}
+      {otherInvestorsPct > 0.3 && (
+        <path d={arc(s2, e2)} fill="#5856D6" opacity={0.7} />
+      )}
+      {/* siz */}
+      {yourPct > 0.3 && (
+        <path d={arc(s3, e3)} fill="#0071E3" />
+      )}
+      {/* center text */}
+      <text x={cx} y={cy - 6} textAnchor="middle" fill="#1D1D1F" fontSize="22" fontWeight="700">
+        {yourPct.toFixed(1)}%
+      </text>
+      <text x={cx} y={cy + 14} textAnchor="middle" fill="#86868B" fontSize="10">
+        sizning ulush
+      </text>
+    </svg>
+  );
+}
+
+export default function HomePage() {
+  const [data, setData] = useState<HubData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [investAmount, setInvestAmount] = useState(10_000_000);
+  const [activePreset, setActivePreset] = useState(10_000_000);
+
+  useEffect(() => {
+    fetch("/api/hub/stats")
+      .then((r) => r.json())
+      .then((d: HubData) => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const stats = data?.stats;
+  const fund = data?.fundraising;
+  const totalRevenueUzs = stats?.totals.monthlyRevenueUzs ?? 0;
+  const currentInvested = fund?.currentCapitalUzs ?? 0;  // hozirgi investorlar jami
+  const investorCount = fund?.investorCount ?? 0;
+  const targetCapital = fund?.targetCapitalUzs ?? 500_000_000;
+
+  /* ═══ YANGI FORMULA ═══
+     Toza daromad 2 ga bo'linadi:
+       - 20% → yaratuvchi (doim)
+       - 80% → investorlar fondi
+     Investorlar fondi ichida har kimga proporsional:
+       investor_ulushi = (uning_puli / jami_kiritilgan) × 80%
+     Misol: 4 investor × 10M = 40M. Yangi investor 10M kiritsa → jami 50M
+       yangi investor ulushi = (10M / 50M) × 80% = 16%
+       oylik foydasi = toza_daromad × 16%
+  */
+  const newTotalInvested = currentInvested + investAmount;
+
+  // Investorning 80% fond ichidagi ulushi
+  const poolSharePct = newTotalInvested > 0
+    ? (investAmount / newTotalInvested) * INVESTOR_POOL_PCT
+    : 0;
+
+  // Boshqa investorlarning umumiy ulushi
+  const otherInvestorsPct = newTotalInvested > 0
+    ? (currentInvested / newTotalInvested) * INVESTOR_POOL_PCT
+    : 0;
+
+  // Oylik va yillik foyda
+  const monthlyProfit = totalRevenueUzs * (poolSharePct / 100);
+  const yearlyProfit = monthlyProfit * 12;
+
+  // Mavjud investorlarning har birining hozirgi oylik foydasi (siz kiritishdan oldin)
+  const avgInvestmentPerInvestor = investorCount > 0
+    ? currentInvested / investorCount
+    : 0;
+  const currentPerInvestorPct = currentInvested > 0 && investorCount > 0
+    ? (avgInvestmentPerInvestor / currentInvested) * INVESTOR_POOL_PCT
+    : 0;
+  const currentPerInvestorProfit = totalRevenueUzs * (currentPerInvestorPct / 100);
+
+  return (
+    <div className="shell pt-4 pb-10">
+      {/* ═══════════ NAV ═══════════ */}
+      <header className="top-nav mt-2">
+        <div className="brand">
+          <span className="brand-dot" />
+          Investorsite
+        </div>
+        <nav className="flex items-center gap-1 flex-wrap">
+          <a href="#formula" className="nav-link">Formula</a>
+          <a href="#portfolio" className="nav-link">Portfel</a>
+          <a href="#calculator" className="nav-link">Kalkulyator</a>
+          <a href="#how" className="nav-link">Jarayon</a>
+          <Link href="/dashboard" className="nav-link">Kabinet</Link>
+          <Link href="/become-investor" className="nav-cta">Investitsiya qilish</Link>
+        </nav>
+      </header>
+
+      {/* ═══════════ HERO ═══════════ */}
+      <section className="mt-16 md:mt-24 max-w-3xl">
+        <span className="badge badge-gold">Cheklangan · 500 mln so&apos;m</span>
+        <h1 className="mt-5 text-4xl sm:text-5xl md:text-[3.5rem] font-bold leading-[1.1] tracking-tight text-text">
+          4 ta loyihaga{" "}
+          <span className="text-accent">investitsiya</span>
+          <br />
+          qiling — har oy foyda oling
+        </h1>
+        <p className="mt-5 text-lg text-text-secondary leading-relaxed max-w-2xl">
+          Toza daromadning <strong className="text-gold">80%</strong> investorlar o&apos;rtasida proporsional taqsimlanadi.
+          Yaratuvchi doim <strong className="text-gold">20%</strong> oladi. Ulush — hozirgi investorlar soniga qarab hisoblanadi, 500 mln maqsadga emas.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link href="/become-investor" className="btn-primary">
+            Investor bo&apos;lish
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </Link>
+          <a href="#calculator" className="btn-secondary">
+            Daromadni hisoblash
+          </a>
+        </div>
+      </section>
+
+      {/* ═══════════ LIVE STATS ═══════════ */}
+      <section className="mt-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="stat-box">
+            <div className="stat-label">Faol platformalar</div>
+            <div className="stat-value">
+              <span className="text-accent">{stats?.totals.onlineProjects ?? "—"}</span>
+              <span className="text-text-muted text-base font-normal"> / 4</span>
+            </div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-label">Investorlar</div>
+            <div className="stat-value">{investorCount}</div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-label">Oylik daromad</div>
+            <div className="stat-value">
+              <span className="text-accent">{fmtMoney(totalRevenueUzs)} </span>
+              <span className="text-text-muted text-xs font-normal">so&apos;m</span>
+            </div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-label">Kiritilgan invest.</div>
+            <div className="stat-value">{fmtUzs(currentInvested)} <span className="text-text-muted text-xs font-normal">so&apos;m</span></div>
+          </div>
+        </div>
+
+        {loading && (
+          <p className="text-center text-sm text-text-muted mt-4 animate-pulse">
+            Real-time ma&apos;lumotlar yuklanmoqda…
+          </p>
+        )}
+      </section>
+
+      {/* ═══════════ FORMULA TUSHUNTIRISH ═══════════ */}
+      <section id="formula" className="mt-12">
+        <span className="badge badge-section">Asosiy formula</span>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Foyda qanday taqsimlanadi?
+        </h2>
+        <p className="text-text-secondary mt-2 mb-8">
+          Butun tizim 3 ta oddiy qoidaga asoslangan — shaffof va aniq.
+        </p>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          {/* Qoida 1 */}
+          <div className="card-elevated text-center">
+            <div className="w-14 h-14 mx-auto rounded-xl bg-gold/15 flex items-center justify-center text-2xl mb-4">
+              👤
+            </div>
+            <div className="text-3xl font-bold text-gold mb-1">{CREATOR_PCT}%</div>
+            <div className="text-sm font-bold text-text mb-2">Yaratuvchi ulushi</div>
+            <p className="text-xs text-text-muted leading-relaxed">
+              Loyihani yaratgan va boshqarayotgan shaxsga toza daromadning {CREATOR_PCT}% har doim tegadi.
+              Bu ulush o&apos;zgarmaydi.
+            </p>
+          </div>
+
+          {/* Qoida 2 */}
+          <div className="card-elevated text-center border-accent/30">
+            <div className="w-14 h-14 mx-auto rounded-xl bg-accent/15 flex items-center justify-center text-2xl mb-4">
+              👥
+            </div>
+            <div className="text-3xl font-bold text-accent mb-1">{INVESTOR_POOL_PCT}%</div>
+            <div className="text-sm font-bold text-text mb-2">Investorlar fondi</div>
+            <p className="text-xs text-text-muted leading-relaxed">
+              Qolgan {INVESTOR_POOL_PCT}% barcha investorlar o&apos;rtasida proporsional taqsimlanadi.
+              Qancha pul kiritgan — shuncha ulush.
+            </p>
+          </div>
+
+          {/* Qoida 3 */}
+          <div className="card-elevated text-center">
+            <div className="w-14 h-14 mx-auto rounded-xl bg-[#5856D6]/15 flex items-center justify-center text-2xl mb-4">
+              🔄
+            </div>
+            <div className="text-sm font-bold text-text mb-2 mt-3">Dinamik ulush</div>
+            <p className="text-xs text-text-muted leading-relaxed">
+              Yangi investor qo&apos;shilsa — ulushlar avtomatik qayta hisoblanadi.
+              500 mln yig&apos;ilgach — yangi investor qabul qilinmaydi.
+            </p>
+            <div className="mt-3 p-2 rounded-lg bg-bg border border-border text-xs text-text-muted">
+              Maqsad: <strong className="text-text">{fmtMoney(targetCapital)}</strong> so&apos;m
+            </div>
+          </div>
+        </div>
+
+        {/* FORMULA VIZUAL */}
+        <div className="card-elevated mt-6">
+          <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-4">Real misolda formula</div>
+
+          <div className="grid md:grid-cols-[1fr_auto_1fr] gap-6 items-start">
+            {/* Chap: raqamlar */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-bg border border-border">
+                <span className="text-sm text-text-muted">Oylik toza daromad</span>
+                <span className="font-mono font-bold text-accent">{fmtMoney(totalRevenueUzs)} so&apos;m</span>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-bg border border-border">
+                <span className="text-sm text-text-muted">→ Yaratuvchiga ({CREATOR_PCT}%)</span>
+                <span className="font-mono font-bold text-gold">{fmtMoney(Math.round(totalRevenueUzs * CREATOR_PCT / 100))} so&apos;m</span>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-bg border border-accent/30">
+                <span className="text-sm text-text-muted">→ Investorlar fondiga ({INVESTOR_POOL_PCT}%)</span>
+                <span className="font-mono font-bold text-accent">{fmtMoney(Math.round(totalRevenueUzs * INVESTOR_POOL_PCT / 100))} so&apos;m</span>
+              </div>
+
+              {investorCount > 0 && (
+                <>
+                  <div className="h-px bg-border my-1" />
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-bg border border-border">
+                    <span className="text-sm text-text-muted">Hozirgi investorlar</span>
+                    <span className="font-mono font-bold">{investorCount} kishi × {fmtMoney(Math.round(avgInvestmentPerInvestor))} so&apos;m</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-accent/5 border border-accent/20">
+                    <span className="text-sm text-text-muted">Har biriga oylik foyda</span>
+                    <span className="font-mono font-bold text-accent">{fmtMoney(Math.round(currentPerInvestorProfit))} so&apos;m</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* O'rta: taqsimot */}
+            <div className="hidden md:flex flex-col items-center justify-center gap-2 pt-4">
+              <div className="w-px h-6 bg-border" />
+              <div className="text-xs text-text-muted">↓</div>
+              <div className="w-px h-6 bg-border" />
+            </div>
+
+            {/* O'ng: vizual Pie */}
+            <div className="flex flex-col items-center justify-center">
+              <PieChart
+                creatorPct={CREATOR_PCT}
+                investorPct={INVESTOR_POOL_PCT}
+                yourPct={0}
+                size={180}
+              />
+              <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-gold" />
+                  <span className="text-text-muted">Yaratuvchi {CREATOR_PCT}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-[#5856D6]" />
+                  <span className="text-text-muted">Investorlar {INVESTOR_POOL_PCT}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════ FUNDRAISING ═══════════ */}
+      {fund && (
+        <section className="mt-10">
+          <div className="card-elevated">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold">Mablag&apos; yig&apos;ish</h3>
+                <p className="text-sm text-text-muted mt-0.5">
+                  Maqsad: {fmtMoney(fund.targetCapitalUzs)} so&apos;m · {investorCount} investor
+                </p>
+              </div>
+              <span className={`badge ${fund.acceptingInvestors ? "badge-live" : "badge-offline"}`}>
+                {fund.acceptingInvestors ? "Ochiq" : "Yopilgan"}
+              </span>
+            </div>
+
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${Math.max(Math.min(fund.progressPct, 100), 1)}%` }} />
+            </div>
+
+            <div className="flex flex-wrap justify-between items-center gap-2 mt-3 text-sm">
+              <span className="text-text-secondary font-medium">
+                {fmtMoney(fund.currentCapitalUzs)} so&apos;m yig&apos;ildi
+              </span>
+              <span className="font-bold text-accent">{fund.progressPct}%</span>
+              <span className="text-text-muted">
+                {fmtMoney(fund.remainingCapitalUzs)} qoldi
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <div className="divider" />
+
+      {/* ═══════════ PORTFOLIO TABLE ═══════════ */}
+      <section id="portfolio">
+        <span className="badge badge-section">Portfel</span>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Investitsiya portfeli
+        </h2>
+        <p className="text-text-secondary mt-2 mb-6">
+          Barcha loyihalarning real-time statistikasi. Ma&apos;lumotlar API orqali yangilanadi.
+        </p>
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : !stats ? (
+          <div className="card text-center py-12 text-text-muted">
+            API bilan bog&apos;lanib bo&apos;lmadi. Keyinroq qayta urinib ko&apos;ring.
+          </div>
+        ) : (
+          <div className="card p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Loyiha</th>
+                    <th>Holat</th>
+                    <th>Mijozlar</th>
+                    <th>Yangi (30k)</th>
+                    <th className="text-right">Oylik daromad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.projects.map((p) => (
+                    <tr key={p.key}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">
+                            {p.key === "copytrade" ? "📊" : p.key === "fath" ? "🤖" : p.key === "pdf" ? "📄" : "📈"}
+                          </span>
+                          <div>
+                            <div className="font-bold">{p.name}</div>
+                            <div className="text-xs text-text-muted">{p.url}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge ${p.stats ? "badge-live" : "badge-offline"}`}>
+                          {p.stats ? "Live" : "Offline"}
+                        </span>
+                      </td>
+                      <td className="font-mono font-bold">{p.stats?.activePayingClients ?? "—"}</td>
+                      <td className="font-mono">{p.stats?.newClients30d ?? "—"}</td>
+                      <td className="text-right font-mono font-bold text-accent">
+                        {p.stats ? `$${p.stats.monthlyRevenueUsd.toFixed(2)}` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border-light">
+                    <td className="font-bold text-text-secondary">Jami</td>
+                    <td>
+                      <span className="badge badge-live">{stats.totals.onlineProjects} faol</span>
+                    </td>
+                    <td className="font-mono font-bold">{stats.totals.activePayingClients}</td>
+                    <td className="font-mono font-bold">{stats.totals.newClients30d}</td>
+                    <td className="text-right font-mono font-bold text-accent text-lg">
+                      ${stats.totals.monthlyRevenueUsd.toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <div className="divider" />
+
+      {/* ═══════════ INTERAKTIV KALKULYATOR ═══════════ */}
+      <section id="calculator">
+        <span className="badge badge-section">Kalkulyator</span>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Daromadingizni hisoblang
+        </h2>
+        <p className="text-text-secondary mt-2 mb-8">
+          Miqdorni kiriting — ulush va foyda real-time hisoblanadi. Boshqa investorlar qo&apos;shilsa ulush o&apos;zgaradi.
+        </p>
+
+        <div className="grid lg:grid-cols-[1fr_280px] gap-6">
+          {/* LEFT — Input + Results */}
+          <div className="space-y-6">
+            {/* Input card */}
+            <div className="card-elevated">
+              <label className="block text-sm font-bold text-text-secondary mb-3">
+                Investitsiya miqdori (so&apos;m)
+              </label>
+
+              <input
+                type="text"
+                className="calc-input"
+                value={fmtMoney(investAmount)}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  const num = parseInt(raw, 10);
+                  if (!isNaN(num) && num <= 500_000_000) {
+                    setInvestAmount(num);
+                    setActivePreset(PRESETS.includes(num) ? num : 0);
+                  } else if (raw === "") {
+                    setInvestAmount(0);
+                    setActivePreset(0);
+                  }
+                }}
+                placeholder="Miqdorni kiriting"
+              />
+
+              <div className="flex flex-wrap gap-2 mt-4">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    className={`calc-preset ${activePreset === p ? "active" : ""}`}
+                    onClick={() => { setInvestAmount(p); setActivePreset(p); }}
+                  >
+                    {fmtUzs(p)}
+                  </button>
+                ))}
+              </div>
+
+              {/* Fond holati */}
+              <div className="mt-6 space-y-2.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Hozir kiritilgan jami investitsiya</span>
+                  <span className="font-mono text-text-secondary">{fmtMoney(currentInvested)} so&apos;m</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Sizdan keyin jami investitsiya</span>
+                  <span className="font-mono font-bold text-text">{fmtMoney(newTotalInvested)} so&apos;m</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Hozirgi investorlar</span>
+                  <span className="font-mono text-text-secondary">{investorCount} kishi</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-text-muted">Oylik toza daromad</span>
+                  <span className="font-mono text-accent">{fmtMoney(totalRevenueUzs)} so&apos;m</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Results */}
+            <div className="card-elevated">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-4">Sizning natijangiz</div>
+
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="calc-result">
+                  <span className="calc-result-label">Sizning ulushingiz</span>
+                  <span className="calc-result-value">{poolSharePct.toFixed(2)}%</span>
+                </div>
+                <div className="calc-result">
+                  <span className="calc-result-label">Fond ichida %</span>
+                  <span className="calc-result-value text-text-secondary text-base">
+                    {newTotalInvested > 0 ? ((investAmount / newTotalInvested) * 100).toFixed(1) : "0"}%
+                    <span className="text-text-muted text-xs"> × 80%</span>
+                  </span>
+                </div>
+                <div className="calc-result">
+                  <span className="calc-result-label">Oylik foyda</span>
+                  <span className="calc-result-value">{fmtMoney(Math.round(monthlyProfit))} so&apos;m</span>
+                </div>
+                <div className="calc-result">
+                  <span className="calc-result-label">Yillik foyda</span>
+                  <span className="calc-result-value">{fmtMoney(Math.round(yearlyProfit))} so&apos;m</span>
+                </div>
+              </div>
+
+              <div className="calc-result mt-3 border-accent/30">
+                <span className="calc-result-label">ROI (yillik)</span>
+                <span className="calc-result-value text-xl">
+                  {investAmount > 0 ? ((yearlyProfit / investAmount) * 100).toFixed(1) : "0.0"}%
+                </span>
+              </div>
+
+              {/* Formula tushuntirish */}
+              <div className="mt-5 p-4 rounded-lg bg-bg border border-border">
+                <p className="text-xs text-text-muted leading-relaxed">
+                  <strong className="text-accent">Hisob-kitob:</strong><br />
+                  1. Toza oylik daromad: <strong className="text-text">{fmtMoney(totalRevenueUzs)}</strong> so&apos;m<br />
+                  2. Investorlar fondiga ({INVESTOR_POOL_PCT}%): <strong className="text-text">{fmtMoney(Math.round(totalRevenueUzs * INVESTOR_POOL_PCT / 100))}</strong> so&apos;m<br />
+                  3. Sizning ulushingiz: {fmtMoney(investAmount)} ÷ {fmtMoney(newTotalInvested)} × {INVESTOR_POOL_PCT}% = <strong className="text-accent">{poolSharePct.toFixed(2)}%</strong><br />
+                  4. Oylik foyda: {fmtMoney(totalRevenueUzs)} × {poolSharePct.toFixed(2)}% = <strong className="text-accent">{fmtMoney(Math.round(monthlyProfit))}</strong> so&apos;m
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <Link href="/become-investor" className="btn-primary w-full justify-center">
+                  {investAmount > 0 ? `${fmtUzs(investAmount)} so'm investitsiya qilish` : "Investitsiya qilish"}
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT — Pie Chart + breakdown */}
+          <div className="space-y-4">
+            <div className="card-elevated flex flex-col items-center py-6">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-4">Daromad taqsimoti</div>
+              <PieChart
+                creatorPct={CREATOR_PCT}
+                investorPct={INVESTOR_POOL_PCT}
+                yourPct={poolSharePct}
+                size={200}
+              />
+              <div className="space-y-2 mt-5 w-full text-xs">
+                <div className="flex items-center gap-2 p-2 rounded bg-bg border border-border">
+                  <div className="w-3 h-3 rounded-sm bg-gold flex-shrink-0" />
+                  <span className="text-text-muted flex-1">Yaratuvchi</span>
+                  <span className="font-mono font-bold text-gold">{CREATOR_PCT}%</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded bg-bg border border-border">
+                  <div className="w-3 h-3 rounded-sm bg-[#5856D6] flex-shrink-0" />
+                  <span className="text-text-muted flex-1">Boshqa investorlar</span>
+                  <span className="font-mono font-bold text-[#5856D6]">{otherInvestorsPct.toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded bg-accent/5 border border-accent/30">
+                  <div className="w-3 h-3 rounded-sm bg-accent flex-shrink-0" />
+                  <span className="text-text-muted flex-1"><strong className="text-accent">Siz</strong></span>
+                  <span className="font-mono font-bold text-accent">{poolSharePct.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Scenariy: agar daromad o'ssa */}
+            <div className="card text-xs">
+              <div className="font-bold text-text-secondary mb-2">Agar daromad 2x o&apos;ssa?</div>
+              <div className="space-y-1.5 text-text-muted">
+                <div className="flex justify-between">
+                  <span>Hozirgi oylik</span>
+                  <span className="font-mono text-accent">{fmtMoney(Math.round(monthlyProfit))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>2x daromadda</span>
+                  <span className="font-mono text-accent">{fmtMoney(Math.round(monthlyProfit * 2))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>5x daromadda</span>
+                  <span className="font-mono text-accent">{fmtMoney(Math.round(monthlyProfit * 5))}</span>
+                </div>
+              </div>
+              <p className="mt-2 text-text-muted/70 leading-relaxed">
+                Ulushingiz o&apos;zgarmaydi — faqat daromad o&apos;sishi kerak.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="divider" />
+
+      {/* ═══════════ HOW IT WORKS ═══════════ */}
+      <section id="how">
+        <span className="badge badge-section">Jarayon</span>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Qanday ishlaydi
+        </h2>
+        <p className="text-text-secondary mt-2 mb-8">4 oddiy qadam — majburiyatsiz</p>
+
+        <div className="grid md:grid-cols-4 gap-4">
+          {[
+            {
+              num: "1", title: "Ariza topshiring",
+              desc: "Investitsiya miqdorini tanlang, 3 daqiqada ariza to'ldiring.",
+            },
+            {
+              num: "2", title: "Shartnoma imzolang",
+              desc: "20/80 taqsimot rasmiy shartnomada qayd etiladi.",
+            },
+            {
+              num: "3", title: "Ulush hisoblanadi",
+              desc: "Pulingiz fondga tushganda — ulushingiz avtomatik belgilanadi.",
+            },
+            {
+              num: "4", title: "Oylik foyda oling",
+              desc: "Har oyning 25-sanasida ulushga mos foyda hisoblanadi.",
+            },
+          ].map((s) => (
+            <div key={s.num} className="card">
+              <div className="step-num">{s.num}</div>
+              <h4 className="font-bold text-lg mb-2">{s.title}</h4>
+              <p className="text-sm text-text-secondary leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="divider" />
+
+      {/* ═══════════ GUARANTEES ═══════════ */}
+      <section>
+        <span className="badge badge-section">Himoya</span>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Investor kafolatlari
+        </h2>
+
+        <div className="card-elevated mt-6">
+          {[
+            { icon: "📐", title: "20/80 qoida", desc: "Yaratuvchi 20%, investorlar 80%. Bu nisbat o'zgarmaydi." },
+            { icon: "⚖️", title: "Proporsional taqsimot", desc: "Qancha kiritdingiz — shuncha ulush. Hech kim ko'proq olmaydi." },
+            { icon: "🔄", title: "Dinamik ulush", desc: "Yangi investor kelsa — ulushlar avtomatik qayta hisoblanadi." },
+            { icon: "📅", title: "25-sana to'lov", desc: "Har oyning 25-sanasi — o'zgarmaydi." },
+            { icon: "📊", title: "Real-time monitoring", desc: "Barcha raqamlar API'lardan — qo'lda kiritish yo'q." },
+            { icon: "🔒", title: "500M limit", desc: "Fond 500 mln so'mga yetganda investor qabul to'xtatiladi." },
+          ].map((g) => (
+            <div key={g.title} className="g-row">
+              <div className="g-icon">{g.icon}</div>
+              <div>
+                <h4 className="font-bold text-sm">{g.title}</h4>
+                <p className="text-sm text-text-secondary mt-0.5">{g.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="divider" />
+
+      {/* ═══════════ REAL MISOL ═══════════ */}
+      <section>
+        <span className="badge badge-section">Real misol</span>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Hozirgi daromad bilan hisob
+        </h2>
+
+        <div className="card-elevated mt-6">
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Investor</th>
+                  <th>Kiritgan pul</th>
+                  <th>Fond ichida %</th>
+                  <th>Umumiy ulush</th>
+                  <th className="text-right">Oylik foyda</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* 4 ta mavjud investor misoli */}
+                {investorCount > 0 && Array.from({ length: Math.min(investorCount, 4) }).map((_, i) => {
+                  const avgInv = avgInvestmentPerInvestor;
+                  const pInPool = currentInvested > 0 ? (avgInv / (currentInvested + investAmount)) * 100 : 0;
+                  const pEff = pInPool * INVESTOR_POOL_PCT / 100;
+                  return (
+                    <tr key={`existing-${i}`}>
+                      <td className="text-text-muted">Investor {i + 1}</td>
+                      <td className="font-mono">{fmtMoney(Math.round(avgInv))} so&apos;m</td>
+                      <td className="font-mono">{pInPool.toFixed(1)}%</td>
+                      <td className="font-mono text-[#5856D6]">{pEff.toFixed(2)}%</td>
+                      <td className="text-right font-mono">{fmtMoney(Math.round(totalRevenueUzs * pEff / 100))} so&apos;m</td>
+                    </tr>
+                  );
+                })}
+                {/* Siz */}
+                <tr className="bg-accent/5">
+                  <td className="font-bold text-accent">Siz (yangi)</td>
+                  <td className="font-mono font-bold">{fmtMoney(investAmount)} so&apos;m</td>
+                  <td className="font-mono font-bold">{newTotalInvested > 0 ? ((investAmount / newTotalInvested) * 100).toFixed(1) : "0"}%</td>
+                  <td className="font-mono font-bold text-accent">{poolSharePct.toFixed(2)}%</td>
+                  <td className="text-right font-mono font-bold text-accent">{fmtMoney(Math.round(monthlyProfit))} so&apos;m</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-border-light">
+                  <td className="font-bold">Yaratuvchi</td>
+                  <td className="font-mono text-text-muted">—</td>
+                  <td className="font-mono text-text-muted">—</td>
+                  <td className="font-mono font-bold text-gold">{CREATOR_PCT}%</td>
+                  <td className="text-right font-mono font-bold text-gold">{fmtMoney(Math.round(totalRevenueUzs * CREATOR_PCT / 100))} so&apos;m</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <div className="divider" />
+
+      {/* ═══════════ CTA ═══════════ */}
+      <section className="text-center py-12">
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+          Tayyor bo&apos;lsangiz — <span className="text-accent">boshlang</span>
+        </h2>
+        <p className="text-text-secondary text-lg mt-3 max-w-xl mx-auto">
+          Ariza topshirish 3 daqiqa. Hech qanday oldindan to&apos;lov talab qilinmaydi.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link href="/become-investor" className="btn-primary text-lg px-10 py-4">
+            Investitsiya qilish →
+          </Link>
+        </div>
+        {fund && fund.acceptingInvestors && (
+          <p className="text-sm text-text-muted mt-4">
+            Hali {fmtMoney(fund.remainingCapitalUzs)} so&apos;m joy mavjud
+          </p>
+        )}
+      </section>
+
+      {/* ═══════════ FOOTER ═══════════ */}
+      <footer className="text-center text-sm text-text-muted py-8 border-t border-border">
+        <p className="font-bold text-text-secondary mb-1">Investorsite</p>
+        <p>Barcha raqamlar real API ma&apos;lumotlariga asoslangan.</p>
+        <p className="mt-1 text-xs text-text-muted/50">© 2026</p>
+      </footer>
+    </div>
+  );
+}

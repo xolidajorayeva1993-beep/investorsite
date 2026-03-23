@@ -1,0 +1,10 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Barcha client-side kirish taqiqlangan.
+    // Faqat firebase-admin SDK (server) orqali kirish mumkin.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
