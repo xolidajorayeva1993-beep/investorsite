@@ -115,6 +115,40 @@ type ProjectConfig = {
   active: boolean;
 };
 
+type FooterSettings = {
+  brandName: string;
+  legalEntity: string;
+  address: string;
+  email: string;
+  phone: string;
+  workingHours: string;
+  termsUrl: string;
+  privacyUrl: string;
+  telegramUrl: string;
+  instagramUrl: string;
+  youtubeUrl: string;
+  facebookUrl: string;
+  xUrl: string;
+  linkedinUrl: string;
+};
+
+const DEFAULT_FOOTER_SETTINGS: FooterSettings = {
+  brandName: "FathGroup",
+  legalEntity: "FathGroup Investor Platform",
+  address: "Toshkent, O'zbekiston",
+  email: "support@fathgroup.uz",
+  phone: "+998 93 585 05 07",
+  workingHours: "Dushanba - Juma, 09:00 - 18:00",
+  termsUrl: "/terms",
+  privacyUrl: "/privacy",
+  telegramUrl: "",
+  instagramUrl: "",
+  youtubeUrl: "",
+  facebookUrl: "",
+  xUrl: "",
+  linkedinUrl: "",
+};
+
 const EMPTY_PROJECT: ProjectConfig = {
   key: "", name: "", description: "", url: "", statsUrl: "",
   apiDocsUrl: "",
@@ -132,7 +166,7 @@ type AdminData = {
   expenses: Expense[];
   notifications: Notification[];
   deductions: { taxPercent: number; commissionPercent: number; serverCostPercent: number; otherPercent: number };
-  ownerSettings?: Record<string, string>;
+  ownerSettings?: Record<string, unknown>;
   platformConfig?: { campaignTargetUzs: number; projects: ProjectConfig[] };
   summary: Summary;
 };
@@ -222,6 +256,8 @@ export default function AdminPage() {
     address: "", guvohnoma: "", guvohnomaDate: "", phone: "", bank: "", hisob: "", mfo: "", inn: "",
   });
   const [ownerMsg, setOwnerMsg] = useState("");
+  const [footerForm, setFooterForm] = useState<FooterSettings>(DEFAULT_FOOTER_SETTINGS);
+  const [footerMsg, setFooterMsg] = useState("");
   const [ownerLoaded, setOwnerLoaded] = useState(false);
 
   /* ── Platform config state ── */
@@ -246,7 +282,29 @@ export default function AdminPage() {
       setData(json.data);
       // Load owner settings into form (once)
       if (!ownerLoaded && json.data.ownerSettings) {
-        setOwnerForm((prev) => ({ ...prev, ...json.data.ownerSettings }));
+        const settings = json.data.ownerSettings as Record<string, unknown>;
+        const toStr = (v: unknown) => typeof v === "string" ? v : "";
+        setOwnerForm((prev) => ({
+          ...prev,
+          fullName: toStr(settings.fullName),
+          jshshir: toStr(settings.jshshir),
+          passport: toStr(settings.passport),
+          passportDate: toStr(settings.passportDate),
+          activity: toStr(settings.activity),
+          address: toStr(settings.address),
+          guvohnoma: toStr(settings.guvohnoma),
+          guvohnomaDate: toStr(settings.guvohnomaDate),
+          phone: toStr(settings.phone),
+          bank: toStr(settings.bank),
+          hisob: toStr(settings.hisob),
+          mfo: toStr(settings.mfo),
+          inn: toStr(settings.inn),
+        }));
+        const rawFooter = settings.footer;
+        const footer = rawFooter && typeof rawFooter === "object"
+          ? (rawFooter as Partial<FooterSettings>)
+          : {};
+        setFooterForm({ ...DEFAULT_FOOTER_SETTINGS, ...footer });
         setOwnerLoaded(true);
       }
       // Load platform config (once)
@@ -1383,12 +1441,125 @@ export default function AdminPage() {
               disabled={!!actionLoading}
               onClick={async () => {
                 setOwnerMsg("");
-                const msg = await doAction({ action: "saveOwnerSettings", settings: ownerForm });
+                setFooterMsg("");
+                const msg = await doAction({ action: "saveOwnerSettings", settings: { ...ownerForm, footer: footerForm } });
                 setOwnerMsg(msg);
+                setFooterMsg(msg);
               }}
               className="btn-primary py-3 mt-4 w-full disabled:opacity-40"
             >
               {actionLoading ? "Saqlanmoqda..." : "Saqlash"}
+            </button>
+          </div>
+
+          <div className="card mt-6">
+            <h2 className="text-lg font-bold mb-4">Footer va huquqiy ma&apos;lumotlar</h2>
+            <p className="text-sm text-text-muted mb-4">Bosh sahifadagi footer, Terms/Privacy va ijtimoiy tarmoq havolalari shu yerda boshqariladi</p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-text-muted">Brend nomi</label>
+                  <input type="text" value={footerForm.brandName} onChange={(e) => setFooterForm({ ...footerForm, brandName: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="FathGroup" />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">Yuridik nom</label>
+                  <input type="text" value={footerForm.legalEntity} onChange={(e) => setFooterForm({ ...footerForm, legalEntity: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="FathGroup Investor Platform" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-text-muted">Manzil</label>
+                <input type="text" value={footerForm.address} onChange={(e) => setFooterForm({ ...footerForm, address: e.target.value })}
+                  className="calc-input text-sm !font-normal" placeholder="Toshkent, O'zbekiston" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-text-muted">Email</label>
+                  <input type="text" value={footerForm.email} onChange={(e) => setFooterForm({ ...footerForm, email: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="support@fathgroup.uz" />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">Telefon</label>
+                  <input type="text" value={footerForm.phone} onChange={(e) => setFooterForm({ ...footerForm, phone: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="+998 93 585 05 07" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-text-muted">Ish vaqti</label>
+                <input type="text" value={footerForm.workingHours} onChange={(e) => setFooterForm({ ...footerForm, workingHours: e.target.value })}
+                  className="calc-input text-sm !font-normal" placeholder="Dushanba - Juma, 09:00 - 18:00" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-text-muted">Terms havolasi</label>
+                  <input type="text" value={footerForm.termsUrl} onChange={(e) => setFooterForm({ ...footerForm, termsUrl: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="/terms yoki https://..." />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">Privacy havolasi</label>
+                  <input type="text" value={footerForm.privacyUrl} onChange={(e) => setFooterForm({ ...footerForm, privacyUrl: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="/privacy yoki https://..." />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-text-muted">Telegram URL</label>
+                  <input type="text" value={footerForm.telegramUrl} onChange={(e) => setFooterForm({ ...footerForm, telegramUrl: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="https://t.me/..." />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">Instagram URL</label>
+                  <input type="text" value={footerForm.instagramUrl} onChange={(e) => setFooterForm({ ...footerForm, instagramUrl: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="https://instagram.com/..." />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-text-muted">YouTube URL</label>
+                  <input type="text" value={footerForm.youtubeUrl} onChange={(e) => setFooterForm({ ...footerForm, youtubeUrl: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="https://youtube.com/..." />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">Facebook URL</label>
+                  <input type="text" value={footerForm.facebookUrl} onChange={(e) => setFooterForm({ ...footerForm, facebookUrl: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="https://facebook.com/..." />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-text-muted">X (Twitter) URL</label>
+                  <input type="text" value={footerForm.xUrl} onChange={(e) => setFooterForm({ ...footerForm, xUrl: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="https://x.com/..." />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted">LinkedIn URL</label>
+                  <input type="text" value={footerForm.linkedinUrl} onChange={(e) => setFooterForm({ ...footerForm, linkedinUrl: e.target.value })}
+                    className="calc-input text-sm !font-normal" placeholder="https://linkedin.com/company/..." />
+                </div>
+              </div>
+            </div>
+
+            {footerMsg && (
+              <div className="mt-3 p-3 rounded-xl text-sm bg-green/5 text-green border border-green/20">{footerMsg}</div>
+            )}
+            <button
+              disabled={!!actionLoading}
+              onClick={async () => {
+                setFooterMsg("");
+                const msg = await doAction({ action: "saveOwnerSettings", settings: { ...ownerForm, footer: footerForm } });
+                setFooterMsg(msg);
+              }}
+              className="btn-primary py-3 mt-4 w-full disabled:opacity-40"
+            >
+              {actionLoading ? "Saqlanmoqda..." : "Footer sozlamalarini saqlash"}
             </button>
           </div>
 

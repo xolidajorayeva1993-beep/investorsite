@@ -9,6 +9,41 @@ type HubData = {
   success: boolean;
   stats: AggregatedStats;
   fundraising: FundraisingStatus;
+  footerSettings?: FooterSettings;
+};
+
+type FooterSettings = {
+  brandName: string;
+  legalEntity: string;
+  address: string;
+  email: string;
+  phone: string;
+  workingHours: string;
+  termsUrl: string;
+  privacyUrl: string;
+  telegramUrl: string;
+  instagramUrl: string;
+  youtubeUrl: string;
+  facebookUrl: string;
+  xUrl: string;
+  linkedinUrl: string;
+};
+
+const DEFAULT_FOOTER_SETTINGS: FooterSettings = {
+  brandName: "FathGroup",
+  legalEntity: "FathGroup Investor Platform",
+  address: "Toshkent, O'zbekiston",
+  email: "support@fathgroup.uz",
+  phone: "+998 93 585 05 07",
+  workingHours: "Dushanba - Juma, 09:00 - 18:00",
+  termsUrl: "/terms",
+  privacyUrl: "/privacy",
+  telegramUrl: "",
+  instagramUrl: "",
+  youtubeUrl: "",
+  facebookUrl: "",
+  xUrl: "",
+  linkedinUrl: "",
 };
 
 /* ═══ BIZNES KONSTANTALAR ═══ */
@@ -30,6 +65,36 @@ function toExternalUrl(url: string): string {
   if (!url) return "#";
   if (/^https?:\/\//i.test(url)) return url;
   return `https://${url}`;
+}
+
+function toFooterLink(url: string): string {
+  if (!url) return "#";
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(url)) return url;
+  if (url.startsWith("/")) return url;
+  return `https://${url}`;
+}
+
+function isExternalLink(url: string): boolean {
+  return /^(https?:\/\/|mailto:|tel:)/i.test(url);
+}
+
+function SocialIcon({ kind }: { kind: "telegram" | "instagram" | "youtube" | "facebook" | "x" | "linkedin" }) {
+  if (kind === "telegram") {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 4L3 11l6.5 2.5L19 7l-7 7 .5 6L16 16l3 2 2-14z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  }
+  if (kind === "instagram") {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.6" /><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" /></svg>;
+  }
+  if (kind === "youtube") {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="4" stroke="currentColor" strokeWidth="1.6" /><path d="M10 9l5 3-5 3V9z" fill="currentColor" /></svg>;
+  }
+  if (kind === "facebook") {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 8h3V4h-3a5 5 0 00-5 5v3H6v4h3v4h4v-4h3l1-4h-4V9a1 1 0 011-1z" fill="currentColor" /></svg>;
+  }
+  if (kind === "x") {
+    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4l7 8-7 8h3.5l5.2-6 5.3 6H21l-7.2-8L21 4h-3.5l-5 5.8L7.5 4H4z" fill="currentColor" /></svg>;
+  }
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10a5 5 0 015-5h5v4h-5a1 1 0 00-1 1v9H7v-9z" fill="currentColor" /><path d="M5 8h4v12H5z" fill="currentColor" /></svg>;
 }
 
 /* ═══ Animated Counter ═══ */
@@ -174,6 +239,18 @@ export default function HomePage() {
   const totalUsers = stats?.projects.reduce((sum, p) => sum + (p.stats?.totalUsers ?? 0), 0) ?? 0;
   const totalPaidUsers = stats?.projects.reduce((sum, p) => sum + (p.stats?.paidUsers ?? 0), 0) ?? 0;
   const projectCount = stats?.projects.length ?? 0;
+  const footerProjectNames = stats?.projects?.length
+    ? stats.projects.map((p) => p.name).join(" · ")
+    : "CopyTrade · FATH Robot · EPDF Services · Ticknote";
+  const footer = { ...DEFAULT_FOOTER_SETTINGS, ...(data?.footerSettings ?? {}) };
+  const socialLinks = [
+    { key: "telegram" as const, label: "Telegram", url: footer.telegramUrl },
+    { key: "instagram" as const, label: "Instagram", url: footer.instagramUrl },
+    { key: "youtube" as const, label: "YouTube", url: footer.youtubeUrl },
+    { key: "facebook" as const, label: "Facebook", url: footer.facebookUrl },
+    { key: "x" as const, label: "X", url: footer.xUrl },
+    { key: "linkedin" as const, label: "LinkedIn", url: footer.linkedinUrl },
+  ].filter((item) => item.url?.trim());
 
   return (
     <div className="shell pt-4 pb-10">
@@ -972,10 +1049,70 @@ export default function HomePage() {
       </section>
 
       {/* ═══════════ FOOTER ═══════════ */}
-      <footer className="text-center text-sm text-text-muted py-8 border-t border-border">
-        <p className="font-bold text-text-secondary mb-1">FathGroup</p>
-        <p>CopyTrade · FATH Robot · EPDF Services · Ticknote</p>
-        <p className="mt-1 text-xs text-text-muted/50">Barcha raqamlar real API orqali yangilanadi · © 2026</p>
+      <footer className="py-8 border-t border-border">
+        <div className="grid md:grid-cols-4 gap-6 text-sm">
+          <div>
+            <p className="font-bold text-text-secondary mb-2">{footer.brandName}</p>
+            <p className="text-text-muted leading-relaxed">{footer.legalEntity}</p>
+            <p className="text-text-muted mt-2 leading-relaxed">{footer.address}</p>
+          </div>
+
+          <div>
+            <p className="font-bold text-text-secondary mb-2">Kontaktlar</p>
+            <div className="space-y-1 text-text-muted">
+              <p>
+                <a href={`mailto:${footer.email}`} className="hover:text-accent transition-colors">{footer.email}</a>
+              </p>
+              <p>
+                <a href={`tel:${footer.phone.replace(/\s+/g, "")}`} className="hover:text-accent transition-colors">{footer.phone}</a>
+              </p>
+              <p>{footer.workingHours}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="font-bold text-text-secondary mb-2">Huquqiy bo&apos;lim</p>
+            <div className="space-y-1">
+              {isExternalLink(footer.termsUrl) ? (
+                <a href={toFooterLink(footer.termsUrl)} target="_blank" rel="noreferrer" className="text-text-muted hover:text-accent transition-colors block">Terms &amp; Conditions</a>
+              ) : (
+                <Link href={toFooterLink(footer.termsUrl)} className="text-text-muted hover:text-accent transition-colors block">Terms &amp; Conditions</Link>
+              )}
+              {isExternalLink(footer.privacyUrl) ? (
+                <a href={toFooterLink(footer.privacyUrl)} target="_blank" rel="noreferrer" className="text-text-muted hover:text-accent transition-colors block">Privacy Policy</a>
+              ) : (
+                <Link href={toFooterLink(footer.privacyUrl)} className="text-text-muted hover:text-accent transition-colors block">Privacy Policy</Link>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <p className="font-bold text-text-secondary mb-2">Ijtimoiy tarmoqlar</p>
+            {socialLinks.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {socialLinks.map((social) => (
+                  <a
+                    key={social.key}
+                    href={toFooterLink(social.url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={social.label}
+                    className="w-9 h-9 rounded-lg border border-border-light bg-white/60 text-text-muted hover:text-accent hover:border-accent/40 hover:bg-accent/5 transition-all flex items-center justify-center"
+                  >
+                    <SocialIcon kind={social.key} />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="text-text-muted">Hozircha havolalar kiritilmagan</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-border-light text-xs text-text-muted/70 flex flex-wrap gap-2 justify-between">
+          <p>{footerProjectNames}</p>
+          <p>Barcha raqamlar real API orqali yangilanadi · © 2026</p>
+        </div>
       </footer>
     </div>
   );
