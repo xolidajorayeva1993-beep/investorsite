@@ -4,7 +4,11 @@ import { getStorageSignedUrl } from "@/lib/store";
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ filename: string }> }) {
-  const secret = req.headers.get("x-admin-secret") || req.nextUrl.searchParams.get("secret") || "";
+  const secret =
+    req.headers.get("x-admin-secret") ||
+    req.nextUrl.searchParams.get("secret") ||
+    req.nextUrl.searchParams.get("key") ||
+    "";
   if (!ADMIN_SECRET || secret !== ADMIN_SECRET) {
     return NextResponse.json({ error: "Ruxsat yo'q" }, { status: 401 });
   }

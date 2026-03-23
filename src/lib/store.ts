@@ -4,9 +4,33 @@
  * of Cloud Run instances without data loss on restart.
  */
 import { db } from "./firebase-admin";
+import { getApp } from "firebase-admin/app";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = Record<string, any>;
+
+function normalizeBucketName(raw?: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("gs://")) return trimmed.slice(5);
+  return trimmed;
+}
+
+function getBucketCandidates(): string[] {
+  const projectId =
+    (process.env.FIREBASE_PROJECT_ID || "").trim() ||
+    String(getApp().options.projectId || "").trim();
+
+  const fromEnv = normalizeBucketName(process.env.FIREBASE_STORAGE_BUCKET);
+  const candidates = [
+    fromEnv,
+    projectId ? `${projectId}.firebasestorage.app` : null,
+    projectId ? `${projectId}.appspot.com` : null,
+  ].filter((v): v is string => Boolean(v));
+
+  return Array.from(new Set(candidates));
+}
 
 /** Read all documents from a collection as an array, sorted by _createdAt */
 export async function getAll<T extends AnyRecord = AnyRecord>(
@@ -144,13 +168,26 @@ export async function uploadToStorage(
   contentType: string
 ): Promise<string> {
   const { getStorage } = await import("firebase-admin/storage");
-  const file = getStorage().bucket().file(`${folder}/${fileName}`);
-  await file.save(buffer, { metadata: { contentType } });
-  const [url] = await file.getSignedUrl({
-    action: "read",
-    expires: "2099-01-01",
-  });
-  return url;
+  const storage = getStorage();
+  let lastError: unknown = null;
+
+  for (const bucketName of getBucketCandidates()) {
+    try {
+      const file = storage.bucket(bucketName).file(`${folder}/${fileName}`);
+      await file.save(buffer, { metadata: { contentType } });
+      const [url] = await file.getSignedUrl({
+        action: "read",
+        expires: "2099-01-01",
+      });
+      return url;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Storage bucket topilmadi yoki faylni saqlab bo'lmadi");
 }
 
 /** Get a short-lived (~1h) signed URL for an existing Storage file */
@@ -159,12 +196,18 @@ export async function getStorageSignedUrl(
   fileName: string
 ): Promise<string> {
   const { getStorage } = await import("firebase-admin/storage");
-  const file = getStorage().bucket().file(`${folder}/${fileName}`);
-  const [exists] = await file.exists();
-  if (!exists) throw new Error(`Fayl topilmadi: ${folder}/${fileName}`);
-  const [url] = await file.getSignedUrl({
-    action: "read",
-    expires: Date.now() + 3_600_000,
-  });
-  return url;
+  const storage = getStorage();
+
+  for (const bucketName of getBucketCandidates()) {
+    const file = storage.bucket(bucketName).file(`${folder}/${fileName}`);
+    const [exists] = await file.exists();
+    if (!exists) continue;
+    const [url] = await file.getSignedUrl({
+      action: "read",
+      expires: Date.now() + 3_600_000,
+    });
+    return url;
+  }
+
+  throw new Error(`Fayl topilmadi: ${folder}/${fileName}`);
 }

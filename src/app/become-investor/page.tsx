@@ -355,12 +355,14 @@ export default function BecomeInvestorPage() {
 
       // Upload video confirmation
       if (videoBlob && payload.data?.applicationId) {
-        try {
-          const fd = new FormData();
-          fd.append("video", videoBlob, "confirmation.webm");
-          fd.append("applicationId", payload.data.applicationId);
-          await fetch("/api/investor/upload-video", { method: "POST", body: fd });
-        } catch { /* video upload failure is non-blocking */ }
+        const fd = new FormData();
+        fd.append("video", videoBlob, "confirmation.webm");
+        fd.append("applicationId", payload.data.applicationId);
+        const videoRes = await fetch("/api/investor/upload-video", { method: "POST", body: fd });
+        const videoPayload = await videoRes.json().catch(() => ({}));
+        if (!videoRes.ok || !videoPayload.ok) {
+          throw new Error(videoPayload.error || "Video tasdiqni yuborishda xatolik");
+        }
       }
 
       setStep(7);

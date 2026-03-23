@@ -662,7 +662,7 @@ export default function AdminPage() {
                     <video
                       controls
                       className="w-full rounded-lg max-h-64"
-                      src={`/api/admin/video/${selectedInvestor.videoFile}?key=${encodeURIComponent(secret)}`}
+                      src={`/api/admin/video/${selectedInvestor.videoFile}?secret=${encodeURIComponent(secret)}`}
                     />
                     <p className="text-xs text-text-muted mt-2">
                       Yuklangan: {selectedInvestor.videoUploadedAt ? formatDateTime(selectedInvestor.videoUploadedAt) : "—"}
@@ -778,7 +778,7 @@ export default function AdminPage() {
                         {selectedInvestor.paymentReceiptFile && (
                           <div className="p-2 rounded bg-bg border border-border text-center">
                             <img
-                              src={`/api/admin/receipt/${selectedInvestor.paymentReceiptFile}?key=${encodeURIComponent(secret)}`}
+                              src={`/api/admin/receipt/${selectedInvestor.paymentReceiptFile}?secret=${encodeURIComponent(secret)}`}
                               alt="To'lov cheki"
                               className="max-w-full max-h-96 mx-auto rounded-lg"
                             />
