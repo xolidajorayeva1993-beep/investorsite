@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import type { AggregatedStats, FundraisingStatus } from "@/lib/types";
+import BrandLogo from "@/components/BrandLogo";
 
 type HubData = {
   success: boolean;
@@ -178,10 +179,7 @@ export default function HomePage() {
     <div className="shell pt-4 pb-10">
       {/* ═══════════ NAV ═══════════ */}
       <header className="top-nav mt-2">
-        <div className="brand">
-          <span className="brand-dot" />
-          FathGroup
-        </div>
+        <BrandLogo />
         <nav className="flex items-center gap-1 flex-wrap">
           <a href="#loyihalar" className="nav-link">Loyihalar</a>
           <a href="#formula" className="nav-link">Formula</a>

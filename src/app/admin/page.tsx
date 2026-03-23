@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import BrandLogo from "@/components/BrandLogo";
 
 /* ═══════════ TYPES ═══════════ */
 type Investor = {
@@ -340,7 +341,7 @@ export default function AdminPage() {
     return (
       <div className="shell pt-4 pb-10">
         <header className="top-nav mt-2">
-          <div className="brand"><span className="brand-dot" /> FathGroup</div>
+          <BrandLogo />
           <Link href="/" className="nav-link">Bosh sahifa</Link>
         </header>
 
@@ -395,7 +396,7 @@ export default function AdminPage() {
     <div className="shell pt-4 pb-10">
       {/* Nav */}
       <header className="top-nav mt-2">
-        <div className="brand"><span className="brand-dot" /> Admin Panel</div>
+        <BrandLogo label="Admin Panel" />
         <nav className="flex items-center gap-1">
           <Link href="/" className="nav-link">Sayt</Link>
           <Link href="/dashboard" className="nav-link">Kabinet</Link>

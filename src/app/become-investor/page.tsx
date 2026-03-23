@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import type { AggregatedStats, FundraisingStatus } from "@/lib/types";
+import BrandLogo from "@/components/BrandLogo";
 
 /* ═══════════════ TYPES ═══════════════ */
 type HubData = {
@@ -402,10 +403,7 @@ export default function BecomeInvestorPage() {
     <div className="shell pt-4 pb-10">
       {/* NAV */}
       <header className="top-nav mt-2">
-        <div className="brand">
-          <span className="brand-dot" />
-          FathGroup
-        </div>
+        <BrandLogo />
         <nav className="flex items-center gap-1 flex-wrap">
           <Link href="/" className="nav-link">Bosh sahifa</Link>
           <Link href="/dashboard" className="nav-link">Kabinet</Link>

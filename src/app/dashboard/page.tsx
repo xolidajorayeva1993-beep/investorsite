@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import BrandLogo from "@/components/BrandLogo";
 
 /* ═══════════════ TYPES ═══════════════ */
 type ProjectInfo = {
@@ -557,7 +558,7 @@ export default function DashboardPage() {
     return (
       <div className="shell pt-4 pb-10">
         <header className="top-nav mt-2">
-          <div className="brand"><span className="brand-dot" /> FathGroup</div>
+          <BrandLogo />
           <nav className="flex items-center gap-1">
             <Link href="/" className="nav-link">Bosh sahifa</Link>
             <Link href="/become-investor" className="nav-cta">Investitsiya qilish</Link>
@@ -629,7 +630,7 @@ export default function DashboardPage() {
     <div className="shell pt-4 pb-10">
       {/* ── Top Nav ── */}
       <header className="top-nav mt-2">
-        <div className="brand"><span className="brand-dot" /> FathGroup</div>
+        <BrandLogo />
         <nav className="flex items-center gap-1 flex-wrap">
           <Link href="/" className="nav-link">Bosh sahifa</Link>
           <span className={st.cls}>{st.label}</span>

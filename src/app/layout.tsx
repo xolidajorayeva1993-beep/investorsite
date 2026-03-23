@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   title: "FathGroup — IT loyihalarga investitsiya platformasi",
   description:
     "Ishlaydigan raqamli platformalar portfeliga investitsiya qiling. Shaffof 20/80 taqsimot. Har oy passiv daromad.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
