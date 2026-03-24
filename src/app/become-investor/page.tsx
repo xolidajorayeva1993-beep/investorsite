@@ -430,7 +430,7 @@ export default function BecomeInvestorPage() {
             <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">
               Qadamlar
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-1 gap-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 gap-1.5">
               {steps.map((s) => {
                 const isActive = step === s.id;
                 const isDone = step > s.id;
@@ -540,7 +540,7 @@ export default function BecomeInvestorPage() {
                   <p className="text-center text-text-muted py-8">API bilan bog&apos;lanib bo&apos;lmadi</p>
                 ) : (
                   <>
-                    <div className="overflow-x-auto">
+                    <div className="hidden sm:block overflow-x-auto">
                       <table className="data-table">
                         <thead>
                           <tr>
@@ -581,6 +581,34 @@ export default function BecomeInvestorPage() {
                         </tfoot>
                       </table>
                     </div>
+                    <div className="sm:hidden space-y-2">
+                      {stats.projects.map((p) => (
+                        <div key={p.key} className="rounded-lg border border-border-light bg-bg p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-bold">{p.name}</div>
+                              <div className="text-xs text-text-muted break-all">{p.url}</div>
+                            </div>
+                            <span className={`badge ${p.stats ? "badge-live" : "badge-offline"}`}>
+                              {p.stats ? "Live" : "Offline"}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-center justify-between text-xs">
+                            <span className="text-text-muted">Mijozlar</span>
+                            <span className="font-mono font-bold">{p.stats?.activePayingClients ?? "\u2014"}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between text-xs">
+                            <span className="text-text-muted">Daromad</span>
+                            <span className="font-mono font-bold text-accent">{p.stats ? `$${p.stats.monthlyRevenueUsd.toFixed(0)}` : "\u2014"}</span>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="rounded-lg border border-accent/20 bg-accent/5 p-3">
+                        <div className="text-xs text-text-muted">Jami</div>
+                        <div className="mt-1 text-sm font-bold">{stats.totals.onlineProjects} faol loyiha · {stats.totals.activePayingClients} mijoz</div>
+                        <div className="text-sm font-mono font-bold text-accent mt-1">${stats.totals.monthlyRevenueUsd.toFixed(2)}</div>
+                      </div>
+                    </div>
                     <div className="mt-4 p-3 rounded-xl bg-accent/5 text-sm text-text-secondary">
                       {"\u{1F4E1}"} Barcha raqamlar real API orqali yangilanadi &mdash; qo&apos;lda hech narsa kiritilmagan.
                     </div>
@@ -608,7 +636,7 @@ export default function BecomeInvestorPage() {
                 </div>
 
                 <label className="block text-sm font-bold text-text-secondary mb-3">Investitsiya miqdori</label>
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mb-4">
                   {PRESETS.map((amt) => (
                     <button
                       key={amt}
@@ -642,7 +670,7 @@ export default function BecomeInvestorPage() {
                   </div>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="calc-result">
                     <span className="calc-result-label">Sizning ulushingiz</span>
                     <span className="calc-result-value">{preview.poolSharePct.toFixed(2)}%</span>

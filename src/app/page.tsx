@@ -286,7 +286,7 @@ export default function HomePage() {
         </div>
 
         {/* Hero Stats Row */}
-        <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div className="stat-box relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="stat-label">Faol loyihalar</div>
@@ -321,7 +321,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="mt-6 grid grid-cols-1 sm:flex sm:flex-wrap gap-3">
           <Link href="/become-investor" className="btn-primary">
             Investor bo&apos;lish
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9 4m4 4L9 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -863,7 +863,7 @@ export default function HomePage() {
         </p>
 
         <div className="card-elevated">
-          <div className="overflow-x-auto">
+          <div className="hidden sm:block overflow-x-auto">
             <table className="data-table">
               <thead>
                 <tr>
@@ -907,6 +907,52 @@ export default function HomePage() {
                 </tr>
               </tfoot>
             </table>
+          </div>
+          <div className="sm:hidden space-y-2">
+            {investorCount > 0 && Array.from({ length: Math.min(investorCount, 4) }).map((_, i) => {
+              const avgInv = avgInvestmentPerInvestor;
+              const pInPool = currentInvested > 0 ? (avgInv / (currentInvested + investAmount)) * 100 : 0;
+              const pEff = pInPool * INVESTOR_POOL_PCT / 100;
+              return (
+                <div key={`existing-mobile-${i}`} className="rounded-lg border border-border-light bg-bg p-3">
+                  <div className="text-sm font-bold text-text-muted">Investor {i + 1}</div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                    <span className="text-text-muted">Kiritgan pul</span>
+                    <span className="text-right font-mono">{fmtMoney(Math.round(avgInv))} so&apos;m</span>
+                    <span className="text-text-muted">Fond ichida</span>
+                    <span className="text-right font-mono">{pInPool.toFixed(1)}%</span>
+                    <span className="text-text-muted">Umumiy ulush</span>
+                    <span className="text-right font-mono text-[#5856D6]">{pEff.toFixed(2)}%</span>
+                    <span className="text-text-muted">Oylik foyda</span>
+                    <span className="text-right font-mono font-bold">{fmtMoney(Math.round(totalRevenueUzs * pEff / 100))} so&apos;m</span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+              <div className="text-sm font-bold text-accent">Siz (yangi)</div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <span className="text-text-muted">Kiritgan pul</span>
+                <span className="text-right font-mono font-bold">{fmtMoney(investAmount)} so&apos;m</span>
+                <span className="text-text-muted">Fond ichida</span>
+                <span className="text-right font-mono font-bold">{newTotalInvested > 0 ? ((investAmount / newTotalInvested) * 100).toFixed(1) : "0"}%</span>
+                <span className="text-text-muted">Umumiy ulush</span>
+                <span className="text-right font-mono font-bold text-accent">{poolSharePct.toFixed(2)}%</span>
+                <span className="text-text-muted">Oylik foyda</span>
+                <span className="text-right font-mono font-bold text-accent">{fmtMoney(Math.round(monthlyProfit))} so&apos;m</span>
+              </div>
+            </div>
+            <div className="rounded-lg border border-border-light bg-bg p-3">
+              <div className="text-sm font-bold">Yaratuvchi</div>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="text-text-muted">Ulush</span>
+                <span className="font-mono font-bold text-gold">{CREATOR_PCT}%</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-xs">
+                <span className="text-text-muted">Oylik foyda</span>
+                <span className="font-mono font-bold text-gold">{fmtMoney(Math.round(totalRevenueUzs * CREATOR_PCT / 100))} so&apos;m</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>

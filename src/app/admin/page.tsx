@@ -902,7 +902,7 @@ export default function AdminPage() {
           {/* Investors table */}
           {investors.length > 0 ? (
             <div className="card p-0 overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -936,6 +936,26 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="sm:hidden p-4 space-y-2">
+                {investors.map((inv) => (
+                  <button
+                    key={inv.id}
+                    onClick={() => { setSelectedInvestor(inv); setEditAmount(""); setEditMsg(""); setShowApproveForm(false); setShowRejectForm(false); }}
+                    className="w-full text-left rounded-lg border border-border-light bg-bg p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm font-bold break-words">{inv.fullName}</div>
+                      <span className={STATUS_MAP[inv.status]?.cls || "badge"}>{STATUS_MAP[inv.status]?.label || inv.status}</span>
+                    </div>
+                    <div className="mt-2 text-xs text-text-muted font-mono">{inv.phone}</div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-text-muted">Investitsiya</span>
+                      <span className="text-sm font-mono font-bold text-accent">{fmtMoney(inv.investmentAmountUzs)} so&apos;m</span>
+                    </div>
+                    <div className="mt-1 text-xs text-text-muted">{formatDate(inv.createdAt)}</div>
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
@@ -1063,30 +1083,50 @@ export default function AdminPage() {
           <div className="card-elevated mb-6">
             <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-4">Investorlar va ulushlar</div>
             {investorsList.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Investor</th>
-                      <th>Investitsiya</th>
-                      <th>Ulush</th>
-                      <th>Balans</th>
-                      <th>Sana</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {investorsList.map((inv, i) => (
-                      <tr key={i}>
-                        <td className="font-mono">···{inv.phoneLast4}</td>
-                        <td className="font-mono font-bold">{fmtMoney(inv.investmentAmount)} so&apos;m</td>
-                        <td className="font-mono text-accent">{inv.sharePercent.toFixed(2)}%</td>
-                        <td className="font-mono">{fmtMoney(inv.balance)} so&apos;m</td>
-                        <td className="text-text-muted">{formatDate(inv.joinedDate)}</td>
+              <>
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Investor</th>
+                        <th>Investitsiya</th>
+                        <th>Ulush</th>
+                        <th>Balans</th>
+                        <th>Sana</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {investorsList.map((inv, i) => (
+                        <tr key={i}>
+                          <td className="font-mono">···{inv.phoneLast4}</td>
+                          <td className="font-mono font-bold">{fmtMoney(inv.investmentAmount)} so&apos;m</td>
+                          <td className="font-mono text-accent">{inv.sharePercent.toFixed(2)}%</td>
+                          <td className="font-mono">{fmtMoney(inv.balance)} so&apos;m</td>
+                          <td className="text-text-muted">{formatDate(inv.joinedDate)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="sm:hidden space-y-2">
+                  {investorsList.map((inv, i) => (
+                    <div key={i} className="rounded-lg border border-border-light bg-bg p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-mono font-bold">···{inv.phoneLast4}</span>
+                        <span className="text-xs text-text-muted">{formatDate(inv.joinedDate)}</span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div className="text-text-muted">Investitsiya</div>
+                        <div className="text-right font-mono font-bold">{fmtMoney(inv.investmentAmount)} so&apos;m</div>
+                        <div className="text-text-muted">Ulush</div>
+                        <div className="text-right font-mono font-bold text-accent">{inv.sharePercent.toFixed(2)}%</div>
+                        <div className="text-text-muted">Balans</div>
+                        <div className="text-right font-mono font-bold">{fmtMoney(inv.balance)} so&apos;m</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <p className="text-text-muted text-sm">Faol investorlar yo&apos;q</p>
             )}
@@ -1096,7 +1136,7 @@ export default function AdminPage() {
           <div className="card-elevated mb-6">
             <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-4">Soliq va chegirmalar foizlari</div>
             <p className="text-sm text-text-secondary mb-4">Daromaddan avval ushlab qolinadigan foizlar. Toza summa = Daromad − Chegirmalar.</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="stat-label">Soliq (%)</label>
                 <input type="number" value={dedTax || deductions.taxPercent} onChange={(e) => setDedTax(e.target.value)} min="0" max="100" step="0.1"
@@ -1255,7 +1295,7 @@ export default function AdminPage() {
           <p className="text-text-secondary mt-1 mb-6 text-sm">{withdrawals.length} ta so&apos;rov · {summary.pendingWithdrawals} ta kutilmoqda</p>
 
           {/* Yechish statistikasi */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="stat-box text-center">
               <div className="stat-label">Kutilmoqda</div>
               <div className="stat-value text-base text-gold">{summary.pendingWithdrawals}</div>
@@ -1272,7 +1312,7 @@ export default function AdminPage() {
 
           {withdrawals.length > 0 ? (
             <div className="card mt-6 p-0 overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -1320,6 +1360,36 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+              <div className="sm:hidden p-4 space-y-2">
+                {withdrawals.map((w) => (
+                  <div key={w.id} className="rounded-lg border border-border-light bg-bg p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-sm font-bold break-words">{w.investorName}</div>
+                        <div className="text-xs text-text-muted font-mono">{w.phone}</div>
+                      </div>
+                      <span className={STATUS_MAP[w.status]?.cls || "badge"}>{STATUS_MAP[w.status]?.label || w.status}</span>
+                    </div>
+                    <div className="mt-2 text-sm font-mono font-bold text-accent">{fmtMoney(w.amount)} so&apos;m</div>
+                    <div className="mt-1 text-xs text-text-muted">{w.bankName} · {w.cardNumber}</div>
+                    <div className="mt-1 text-xs text-text-muted">{formatDate(w.createdAt)}</div>
+                    {w.status === "pending" && (
+                      <div className="mt-3 flex gap-2">
+                        <button disabled={!!actionLoading}
+                          onClick={async () => { await doAction({ action: "processWithdrawal", withdrawalId: w.id, newStatus: "completed" }); }}
+                          className="btn-primary py-2 text-xs flex-1 disabled:opacity-40">
+                          Tasdiqlash
+                        </button>
+                        <button disabled={!!actionLoading}
+                          onClick={async () => { await doAction({ action: "processWithdrawal", withdrawalId: w.id, newStatus: "rejected" }); }}
+                          className="btn-secondary py-2 text-xs flex-1 text-danger hover:!text-danger disabled:opacity-40">
+                          Rad
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="card-elevated text-center py-12 mt-6">
@@ -1338,7 +1408,7 @@ export default function AdminPage() {
 
           {transactions.length > 0 ? (
             <div className="card p-0 overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -1369,6 +1439,24 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="sm:hidden p-4 space-y-2">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="rounded-lg border border-border-light bg-bg p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-mono text-text-muted">{tx.id.slice(0, 12)}</span>
+                      <span className={`badge ${tx.type === "deposit" ? "badge-live" : tx.type === "withdrawal" ? "badge-offline" : "badge-gold"}`}>
+                        {tx.type === "deposit" ? "Kirish" : tx.type === "withdrawal" ? "Chiqish" : tx.type}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-sm text-text-secondary break-words">{tx.description}</div>
+                    <div className="mt-1 text-xs text-text-muted">Investor: {tx.investorId.slice(0, 12)}</div>
+                    <div className="mt-1 text-xs text-text-muted">{formatDateTime(tx.createdAt)}</div>
+                    <div className={`mt-2 text-sm font-mono font-bold ${tx.type === "deposit" ? "text-green" : "text-danger"}`}>
+                      {tx.type === "withdrawal" ? "-" : "+"}{fmtMoney(tx.amount)} so&apos;m
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ) : (

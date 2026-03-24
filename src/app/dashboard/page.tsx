@@ -694,7 +694,7 @@ export default function DashboardPage() {
       </header>
 
       {/* ── Tab Navigation ── */}
-      <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:flex sm:gap-1 sm:overflow-x-auto sm:pb-2 sm:scrollbar-hide">
+      <div className="mt-6 grid grid-cols-2 gap-2 sm:mt-8 sm:flex sm:gap-1 sm:overflow-x-auto sm:pb-2 sm:scrollbar-hide">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
             className={`calc-preset ${activeTab === t.key ? "active" : ""} relative w-full sm:w-auto text-center`}>
@@ -1416,27 +1416,42 @@ export default function DashboardPage() {
             <div className="p-5 pb-0">
               <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Daromad prognozi</div>
             </div>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Davr</th>
-                  <th className="text-right">Kutilgan daromad</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { label: "Oylik", val: data.netMonthlyProfit || data.monthlyProfit },
-                  { label: "Choraklik (3 oy)", val: (data.netMonthlyProfit || data.monthlyProfit) * 3 },
-                  { label: "Yarim yillik (6 oy)", val: (data.netMonthlyProfit || data.monthlyProfit) * 6 },
-                  { label: "Yillik (12 oy)", val: data.netYearlyProfit || data.yearlyProfit },
-                ].map((row) => (
-                  <tr key={row.label}>
-                    <td className="text-text-secondary">{row.label}</td>
-                    <td className="text-right font-mono font-bold">{fmtMoney(Math.round(row.val))} so&apos;m</td>
+            <div className="hidden sm:block">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Davr</th>
+                    <th className="text-right">Kutilgan daromad</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {[
+                    { label: "Oylik", val: data.netMonthlyProfit || data.monthlyProfit },
+                    { label: "Choraklik (3 oy)", val: (data.netMonthlyProfit || data.monthlyProfit) * 3 },
+                    { label: "Yarim yillik (6 oy)", val: (data.netMonthlyProfit || data.monthlyProfit) * 6 },
+                    { label: "Yillik (12 oy)", val: data.netYearlyProfit || data.yearlyProfit },
+                  ].map((row) => (
+                    <tr key={row.label}>
+                      <td className="text-text-secondary">{row.label}</td>
+                      <td className="text-right font-mono font-bold">{fmtMoney(Math.round(row.val))} so&apos;m</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="sm:hidden p-4 space-y-2">
+              {[
+                { label: "Oylik", val: data.netMonthlyProfit || data.monthlyProfit },
+                { label: "Choraklik (3 oy)", val: (data.netMonthlyProfit || data.monthlyProfit) * 3 },
+                { label: "Yarim yillik (6 oy)", val: (data.netMonthlyProfit || data.monthlyProfit) * 6 },
+                { label: "Yillik (12 oy)", val: data.netYearlyProfit || data.yearlyProfit },
+              ].map((row) => (
+                <div key={row.label} className="rounded-lg border border-border-light bg-bg p-3 flex items-center justify-between gap-3">
+                  <span className="text-sm text-text-secondary">{row.label}</span>
+                  <span className="text-sm font-mono font-bold text-accent">{fmtMoney(Math.round(row.val))} so&apos;m</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -1450,7 +1465,7 @@ export default function DashboardPage() {
 
           {investorsList.length > 0 ? (
             <div className="card p-0 overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -1471,6 +1486,24 @@ export default function DashboardPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="sm:hidden p-4 space-y-2">
+                {investorsList.map((inv, i) => (
+                  <div key={i} className={`rounded-lg border p-3 ${inv.isMe ? "border-accent/30 bg-accent/5" : "border-border-light bg-bg"}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-mono font-bold">{inv.isMe ? "Siz" : `···${inv.phoneLast4}`}</span>
+                      <span className="text-xs text-text-muted">{formatDate(inv.joinedDate)}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-text-muted">Investitsiya</span>
+                      <span className="text-sm font-mono font-bold">{fmtMoney(inv.investmentAmount)} so&apos;m</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-xs text-text-muted">Ulush</span>
+                      <span className="text-sm font-mono font-bold text-accent">{inv.sharePercent.toFixed(2)}%</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ) : (
@@ -1917,26 +1950,39 @@ export default function DashboardPage() {
 
           {data.transactions.length > 0 ? (
             <div className="card p-0 overflow-hidden">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Tavsif</th>
-                    <th>Sana</th>
-                    <th className="text-right">Miqdor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.transactions.map((tx) => (
-                    <tr key={tx.id}>
-                      <td className="font-bold">{tx.description}</td>
-                      <td className="text-text-muted">{formatDateTime(tx.createdAt)}</td>
-                      <td className={`text-right font-mono font-bold ${tx.type === "deposit" ? "text-green" : tx.type === "withdrawal" ? "text-danger" : "text-accent"}`}>
-                        {tx.type === "withdrawal" ? "-" : "+"}{fmtMoney(tx.amount)} so&apos;m
-                      </td>
+              <div className="hidden sm:block">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Tavsif</th>
+                      <th>Sana</th>
+                      <th className="text-right">Miqdor</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.transactions.map((tx) => (
+                      <tr key={tx.id}>
+                        <td className="font-bold">{tx.description}</td>
+                        <td className="text-text-muted">{formatDateTime(tx.createdAt)}</td>
+                        <td className={`text-right font-mono font-bold ${tx.type === "deposit" ? "text-green" : tx.type === "withdrawal" ? "text-danger" : "text-accent"}`}>
+                          {tx.type === "withdrawal" ? "-" : "+"}{fmtMoney(tx.amount)} so&apos;m
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="sm:hidden p-4 space-y-2">
+                {data.transactions.map((tx) => (
+                  <div key={tx.id} className="rounded-lg border border-border-light bg-bg p-3">
+                    <div className="text-sm font-bold break-words">{tx.description}</div>
+                    <div className="text-xs text-text-muted mt-1">{formatDateTime(tx.createdAt)}</div>
+                    <div className={`text-sm font-mono font-bold mt-2 ${tx.type === "deposit" ? "text-green" : tx.type === "withdrawal" ? "text-danger" : "text-accent"}`}>
+                      {tx.type === "withdrawal" ? "-" : "+"}{fmtMoney(tx.amount)} so&apos;m
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="card-elevated text-center py-12">
