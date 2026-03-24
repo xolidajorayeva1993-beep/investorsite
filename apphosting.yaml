@@ -10,7 +10,7 @@ env:
     value: fathai-d90bc
 
   - variable: FIREBASE_STORAGE_BUCKET
-    value: fathai-d90bc.appspot.com
+    value: fathai-d90bc.firebasestorage.app
 
   - variable: CAMPAIGN_TARGET_UZS
     value: "500000000"
