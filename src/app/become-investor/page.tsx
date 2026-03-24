@@ -406,7 +406,7 @@ export default function BecomeInvestorPage() {
       {/* NAV */}
       <header className="top-nav mt-2">
         <BrandLogo />
-        <nav className="flex items-center gap-1 flex-wrap">
+        <nav className="w-full md:w-auto flex items-center gap-1 flex-nowrap md:flex-wrap overflow-x-auto pb-1 md:pb-0">
           <Link href="/" className="nav-link">Bosh sahifa</Link>
           <Link href="/dashboard" className="nav-link">Kabinet</Link>
         </nav>
@@ -592,7 +592,7 @@ export default function BecomeInvestorPage() {
             {/* STEP 2: KALKULYATOR */}
             {step === 2 && (
               <div>
-                <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                   <div className="stat-box text-center">
                     <div className="stat-label">Jami investitsiya</div>
                     <div className="stat-value text-lg">{currentInvested > 0 ? fmtShort(currentInvested) : "\u2014"}</div>

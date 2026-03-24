@@ -257,7 +257,7 @@ export default function HomePage() {
       {/* ═══════════ NAV ═══════════ */}
       <header className="top-nav mt-2">
         <BrandLogo />
-        <nav className="flex items-center gap-1 flex-wrap">
+        <nav className="w-full md:w-auto flex items-center gap-1 flex-nowrap md:flex-wrap overflow-x-auto pb-1 md:pb-0">
           <a href="#loyihalar" className="nav-link">Loyihalar</a>
           <a href="#formula" className="nav-link">Formula</a>
           <a href="#calculator" className="nav-link">Kalkulyator</a>
@@ -433,7 +433,7 @@ export default function HomePage() {
                 <p className="text-sm font-medium text-accent mb-3">{p.tagline}</p>
 
                 {/* Stats Row */}
-                <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
                   <div className="text-center p-2.5 rounded-xl bg-white/60 border border-border-light">
                     <div className="text-lg font-bold">{s?.totalUsers ?? 0}</div>
                     <div className="text-[10px] text-text-muted">Foydalanuvchilar</div>

@@ -686,7 +686,7 @@ export default function DashboardPage() {
       {/* ── Top Nav ── */}
       <header className="top-nav mt-2">
         <BrandLogo />
-        <nav className="flex items-center gap-1 flex-wrap">
+        <nav className="w-full md:w-auto flex items-center gap-1 flex-nowrap md:flex-wrap overflow-x-auto pb-1 md:pb-0">
           <Link href="/" className="nav-link">Bosh sahifa</Link>
           <span className={st.cls}>{st.label}</span>
           <button onClick={handleLogout} className="nav-link text-text-muted hover:text-danger">Chiqish</button>
@@ -1503,7 +1503,7 @@ export default function DashboardPage() {
           <p className="text-text-secondary mt-1 mb-6 text-sm">Balansdan istalgan vaqtda pul yeching yoki reinvest qiling</p>
 
           {/* Balans stats */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="stat-box text-center">
               <div className="stat-label">Balans</div>
               <div className="stat-value text-base text-green">{fmtMoney(data.balance || 0)}</div>
@@ -1699,7 +1699,7 @@ export default function DashboardPage() {
           <p className="text-text-secondary mt-1 mb-6 text-sm">Ko&apos;proq investitsiya — ko&apos;proq ulush va daromad</p>
 
           {/* Joriy holat */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="stat-box text-center">
               <div className="stat-label">Joriy investitsiya</div>
               <div className="stat-value text-base">{fmtShort(data.investmentAmountUzs)}</div>
