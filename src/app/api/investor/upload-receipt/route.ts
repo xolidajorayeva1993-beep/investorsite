@@ -87,16 +87,42 @@ export async function POST(req: NextRequest) {
       buffer = Buffer.from(base64Content, "base64");
     }
 
+    const nowIso = new Date().toISOString();
     const fileName = `${app.id}_${Date.now()}.${safeExt}`;
-    const receiptUrl = await store.uploadToStorage("receipts", fileName, buffer, receiptContentType);
 
-    await store.updateFields("applications", app.id, {
-      status: "payment_uploaded",
-      paymentReceiptFile: fileName,
-      paymentReceiptUrl: receiptUrl,
-      paymentReceiptNote: receiptNote || "",
-      paymentUploadedAt: new Date().toISOString(),
-    });
+    try {
+      const receiptUrl = await store.uploadToStorage("receipts", fileName, buffer, receiptContentType);
+      await store.updateFields("applications", app.id, {
+        status: "payment_uploaded",
+        paymentReceiptFile: fileName,
+        paymentReceiptUrl: receiptUrl,
+        paymentReceiptDataUrl: null,
+        paymentReceiptNote: receiptNote || "",
+        paymentUploadedAt: nowIso,
+      });
+    } catch (storageErr) {
+      // Storage ishlamasa, kichik rasmlar uchun Firestore fallback.
+      if (buffer.length > 500 * 1024) {
+        const detail = storageErr instanceof Error ? storageErr.message : "Storage upload xatosi";
+        return NextResponse.json(
+          {
+            ok: false,
+            error: `Storage xatosi (${detail}). Rasmni 500KB dan kichik qilib qayta yuboring yoki Firebase Storage ruxsatlarini tekshiring.`,
+          },
+          { status: 500 }
+        );
+      }
+
+      const dataUrl = `data:${receiptContentType};base64,${buffer.toString("base64")}`;
+      await store.updateFields("applications", app.id, {
+        status: "payment_uploaded",
+        paymentReceiptFile: null,
+        paymentReceiptUrl: null,
+        paymentReceiptDataUrl: dataUrl,
+        paymentReceiptNote: receiptNote || "",
+        paymentUploadedAt: nowIso,
+      });
+    }
 
     return NextResponse.json({ ok: true, message: "Chek muvaffaqiyatli yuklandi" });
   } catch (err) {

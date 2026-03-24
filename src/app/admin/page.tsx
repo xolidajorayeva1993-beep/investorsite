@@ -24,6 +24,7 @@ type Investor = {
   rejectionReason?: string;
   paymentUploadedAt?: string;
   paymentReceiptFile?: string;
+  paymentReceiptDataUrl?: string;
   paymentReceiptNote?: string;
   adminRequisites?: { bank: string; account: string; mfo: string; inn: string; recipient: string };
   adminContactInfo?: { phone: string; telegram: string };
@@ -775,14 +776,16 @@ export default function AdminPage() {
                             <span className="font-bold">{selectedInvestor.paymentReceiptNote}</span>
                           </div>
                         )}
-                        {selectedInvestor.paymentReceiptFile && (
+                        {(selectedInvestor.paymentReceiptFile || selectedInvestor.paymentReceiptDataUrl) && (
                           <div className="p-2 rounded bg-bg border border-border text-center">
                             <img
-                              src={`/api/admin/receipt/${selectedInvestor.paymentReceiptFile}?secret=${encodeURIComponent(secret)}`}
+                              src={selectedInvestor.paymentReceiptFile
+                                ? `/api/admin/receipt/${selectedInvestor.paymentReceiptFile}?secret=${encodeURIComponent(secret)}`
+                                : (selectedInvestor.paymentReceiptDataUrl || "")}
                               alt="To'lov cheki"
                               className="max-w-full max-h-96 mx-auto rounded-lg"
                             />
-                            <p className="text-xs text-text-muted mt-2 font-mono">{selectedInvestor.paymentReceiptFile}</p>
+                            <p className="text-xs text-text-muted mt-2 font-mono">{selectedInvestor.paymentReceiptFile || "firestore-inline"}</p>
                           </div>
                         )}
                       </div>
