@@ -26,10 +26,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Parol noto''g''ri." }, { status: 401 });
     }
 
-    const [allApps, withdrawalsAll, transactionsAll, deductions, cfg] = await Promise.all([
+    const [allApps, withdrawalsAll, transactionsAll, expensesAll, deductions, cfg] = await Promise.all([
       store.getAll("applications"),
       store.getAll("withdrawals"),
       store.getAll("transactions"),
+      store.getAll("expenses"),
       store.getConfig("config", "deductions", { taxPercent: 12, commissionPercent: 2, serverCostPercent: 3, otherPercent: 0 }),
       readPlatformConfig(),
     ]);
@@ -88,6 +89,17 @@ export async function POST(req: NextRequest) {
       .filter((w: any) => w.status === "completed")
       .reduce((s: number, w: any) => s + (Number(w.amount) || 0), 0);
 
+    const totalFundExpensesAmount = expensesAll
+      .filter((e: any) => e.status === "completed")
+      .reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+    const investorExpenseShareUzs = totalInvested > 0
+      ? Math.round(totalFundExpensesAmount * (myInvestment / totalInvested))
+      : 0;
+
+    const totalDistributed = transactions
+      .filter((t: any) => t.type === "profit")
+      .reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
+
     const campaignTarget = Number(cfg.campaignTargetUzs) || 500_000_000;
     const campaignProgress = campaignTarget > 0 ? Math.min(100, (totalInvested / campaignTarget) * 100) : 0;
 
@@ -137,8 +149,8 @@ export async function POST(req: NextRequest) {
         netMonthlyProfit,
         netYearlyProfit,
         expenses: [],
-        totalExpensesAmount: 0,
-        totalDistributed: 0,
+        totalExpensesAmount: investorExpenseShareUzs,
+        totalDistributed,
         lastDistributionMonth: "",
         contractId: appData.contractId,
         contractHash: appData.contractHash,
