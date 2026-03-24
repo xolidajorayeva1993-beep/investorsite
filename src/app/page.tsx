@@ -267,6 +267,27 @@ export default function HomePage() {
         </nav>
       </header>
 
+      <section className="md:hidden mt-4">
+        <div className="mobile-home-tabs">
+          <a href="#loyihalar" className="mobile-home-tab">
+            <span className="mobile-home-tab-title">Loyihalar</span>
+            <span className="mobile-home-tab-sub">Portfelni ko&apos;rish</span>
+          </a>
+          <a href="#formula" className="mobile-home-tab">
+            <span className="mobile-home-tab-title">Formula</span>
+            <span className="mobile-home-tab-sub">20/80 taqsimot</span>
+          </a>
+          <a href="#calculator" className="mobile-home-tab">
+            <span className="mobile-home-tab-title">Kalkulyator</span>
+            <span className="mobile-home-tab-sub">Daromad hisoblash</span>
+          </a>
+          <a href="#how" className="mobile-home-tab">
+            <span className="mobile-home-tab-title">Jarayon</span>
+            <span className="mobile-home-tab-sub">4 oddiy qadam</span>
+          </a>
+        </div>
+      </section>
+
       {/* ═══════════ HERO ═══════════ */}
       <section
         ref={heroAnim.ref}

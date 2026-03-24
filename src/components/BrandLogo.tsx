@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type BrandLogoProps = {
   label?: string;
   className?: string;
@@ -12,7 +14,7 @@ export default function BrandLogo({
   textClassName = "",
 }: BrandLogoProps) {
   return (
-    <div className={`brand ${className}`.trim()}>
+    <Link href="/" aria-label="Bosh sahifaga qaytish" className={`brand ${className}`.trim()}>
       <span className={`brand-mark ${markClassName}`.trim()} aria-hidden="true">
         <svg viewBox="0 0 64 64" className="brand-mark-svg" role="img">
           <defs>
@@ -30,6 +32,6 @@ export default function BrandLogo({
         </svg>
       </span>
       <span className={`brand-text ${textClassName}`.trim()}>{label}</span>
-    </div>
+    </Link>
   );
 }
