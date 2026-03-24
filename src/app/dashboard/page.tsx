@@ -686,7 +686,7 @@ export default function DashboardPage() {
       {/* ── Top Nav ── */}
       <header className="top-nav mt-2">
         <BrandLogo />
-        <nav className="w-full md:w-auto flex items-center gap-1 flex-nowrap md:flex-wrap overflow-x-auto pb-1 md:pb-0">
+        <nav className="w-full md:w-auto flex items-center gap-1">
           <Link href="/" className="nav-link">Bosh sahifa</Link>
           <span className={st.cls}>{st.label}</span>
           <button onClick={handleLogout} className="nav-link text-text-muted hover:text-danger">Chiqish</button>
@@ -694,10 +694,10 @@ export default function DashboardPage() {
       </header>
 
       {/* ── Tab Navigation ── */}
-      <div className="mt-8 flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:flex sm:gap-1 sm:overflow-x-auto sm:pb-2 sm:scrollbar-hide">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
-            className={`calc-preset ${activeTab === t.key ? "active" : ""} relative`}>
+            className={`calc-preset ${activeTab === t.key ? "active" : ""} relative w-full sm:w-auto text-center`}>
             {t.label}
             {t.badge ? <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white text-[10px] rounded-full flex items-center justify-center">{t.badge > 9 ? "9+" : t.badge}</span> : null}
           </button>

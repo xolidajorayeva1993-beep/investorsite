@@ -484,7 +484,7 @@ export default function AdminPage() {
       {/* Nav */}
       <header className="top-nav mt-2">
         <BrandLogo label="Admin Panel" />
-        <nav className="w-full md:w-auto flex items-center gap-1 flex-nowrap overflow-x-auto pb-1 md:pb-0">
+        <nav className="w-full md:w-auto flex items-center gap-1">
           <Link href="/" className="nav-link">Sayt</Link>
           <Link href="/dashboard" className="nav-link">Kabinet</Link>
           <button onClick={() => { localStorage.removeItem(ADMIN_SESSION_KEY); setAuthed(false); setSecret(""); setData(null); }} className="nav-link text-text-muted hover:text-danger">
@@ -494,10 +494,10 @@ export default function AdminPage() {
       </header>
 
       {/* Tabs */}
-      <div className="mt-8 flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="mt-6 grid grid-cols-3 gap-2 sm:mt-8 sm:flex sm:gap-1 sm:overflow-x-auto sm:pb-2 sm:scrollbar-hide">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`calc-preset ${tab === t.key ? "active" : ""}`}>
+            className={`calc-preset ${tab === t.key ? "active" : ""} w-full sm:w-auto text-center`}>
             {t.label}{t.count ? ` (${t.count})` : ""}
           </button>
         ))}

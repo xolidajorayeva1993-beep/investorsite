@@ -406,7 +406,7 @@ export default function BecomeInvestorPage() {
       {/* NAV */}
       <header className="top-nav mt-2">
         <BrandLogo />
-        <nav className="w-full md:w-auto flex items-center gap-1 flex-nowrap md:flex-wrap overflow-x-auto pb-1 md:pb-0">
+        <nav className="w-full md:w-auto flex items-center gap-1">
           <Link href="/" className="nav-link">Bosh sahifa</Link>
           <Link href="/dashboard" className="nav-link">Kabinet</Link>
         </nav>
@@ -430,7 +430,7 @@ export default function BecomeInvestorPage() {
             <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">
               Qadamlar
             </div>
-            <div className="flex flex-row lg:flex-col gap-1.5 overflow-x-auto pb-2 lg:pb-0">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-1 gap-1.5">
               {steps.map((s) => {
                 const isActive = step === s.id;
                 const isDone = step > s.id;
@@ -441,7 +441,7 @@ export default function BecomeInvestorPage() {
                       if (isDone || isActive) setStep(s.id);
                     }}
                     disabled={step < s.id}
-                    className={`text-left px-3 py-2.5 rounded-xl border transition-all w-full min-w-[64px] lg:min-w-0 ${
+                    className={`text-left px-2.5 py-2 rounded-xl border transition-all w-full min-w-0 ${
                       isActive
                         ? "border-accent bg-accent/10"
                         : isDone
@@ -461,11 +461,11 @@ export default function BecomeInvestorPage() {
                       >
                         {isDone ? "\u2713" : s.icon}
                       </span>
-                      <div className="hidden lg:block">
-                        <div className={`text-sm font-bold ${isActive ? "text-text" : "text-text-secondary"}`}>
+                      <div className="block min-w-0">
+                        <div className={`text-[11px] sm:text-xs lg:text-sm font-bold truncate ${isActive ? "text-text" : "text-text-secondary"}`}>
                           {s.title}
                         </div>
-                        <div className="text-xs text-text-muted">{s.sub}</div>
+                        <div className="hidden lg:block text-xs text-text-muted">{s.sub}</div>
                       </div>
                     </div>
                   </button>

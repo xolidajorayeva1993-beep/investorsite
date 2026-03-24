@@ -257,11 +257,11 @@ export default function HomePage() {
       {/* ═══════════ NAV ═══════════ */}
       <header className="top-nav mt-2">
         <BrandLogo />
-        <nav className="w-full md:w-auto flex items-center gap-1 flex-nowrap md:flex-wrap overflow-x-auto pb-1 md:pb-0">
-          <a href="#loyihalar" className="nav-link">Loyihalar</a>
-          <a href="#formula" className="nav-link">Formula</a>
-          <a href="#calculator" className="nav-link">Kalkulyator</a>
-          <a href="#how" className="nav-link">Jarayon</a>
+        <nav className="w-full md:w-auto flex items-center gap-1">
+          <a href="#loyihalar" className="nav-link hidden md:inline-flex">Loyihalar</a>
+          <a href="#formula" className="nav-link hidden md:inline-flex">Formula</a>
+          <a href="#calculator" className="nav-link hidden md:inline-flex">Kalkulyator</a>
+          <a href="#how" className="nav-link hidden md:inline-flex">Jarayon</a>
           <Link href="/dashboard" className="nav-link">Kabinet</Link>
           <Link href="/become-investor" className="nav-cta">Investitsiya qilish</Link>
         </nav>
