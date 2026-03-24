@@ -268,46 +268,77 @@ export default function HomePage() {
       </header>
 
       <section className="md:hidden mt-4">
-        <div className="mobile-home-tabs">
-          <a href="#loyihalar" className="mobile-home-tab">
-            <span className="mobile-home-tab-title">Loyihalar</span>
-            <span className="mobile-home-tab-sub">Portfelni ko&apos;rish</span>
-          </a>
-          <a href="#formula" className="mobile-home-tab">
-            <span className="mobile-home-tab-title">Formula</span>
-            <span className="mobile-home-tab-sub">20/80 taqsimot</span>
-          </a>
-          <a href="#calculator" className="mobile-home-tab">
-            <span className="mobile-home-tab-title">Kalkulyator</span>
-            <span className="mobile-home-tab-sub">Daromad hisoblash</span>
-          </a>
-          <a href="#how" className="mobile-home-tab">
-            <span className="mobile-home-tab-title">Jarayon</span>
-            <span className="mobile-home-tab-sub">4 oddiy qadam</span>
-          </a>
+        <div className="mobile-first-intro">
+          <div className="mobile-first-intro-head">
+            <span className="badge badge-section !mb-0">1 daqiqada tushuning</span>
+            <p className="text-xs text-text-muted mt-2">Nimani olasiz, qanday ishlaydi va qayerdan boshlash kerakligi shu yerda.</p>
+          </div>
+          <div className="mobile-first-steps">
+            <div className="mobile-first-step">
+              <span className="mobile-first-step-no">1</span>
+              <div>
+                <div className="mobile-first-step-title">Portfelni ko&apos;ring</div>
+                <div className="mobile-first-step-sub">Real ishlayotgan loyihalar</div>
+              </div>
+            </div>
+            <div className="mobile-first-step">
+              <span className="mobile-first-step-no">2</span>
+              <div>
+                <div className="mobile-first-step-title">Daromadni hisoblang</div>
+                <div className="mobile-first-step-sub">20/80 formulaga asosan</div>
+              </div>
+            </div>
+            <div className="mobile-first-step">
+              <span className="mobile-first-step-no">3</span>
+              <div>
+                <div className="mobile-first-step-title">Ariza yuboring</div>
+                <div className="mobile-first-step-sub">Investor bo&apos;lish jarayoni</div>
+              </div>
+            </div>
+          </div>
+          <div className="mobile-first-links">
+            <a href="#loyihalar" className="mobile-first-link">Loyihalar</a>
+            <a href="#calculator" className="mobile-first-link">Kalkulyator</a>
+            <a href="#how" className="mobile-first-link">Jarayon</a>
+          </div>
         </div>
       </section>
 
       {/* ═══════════ HERO ═══════════ */}
       <section
         ref={heroAnim.ref}
-        className={`mt-16 md:mt-24 transition-all duration-1000 ${heroAnim.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+        className={`mt-10 md:mt-24 transition-all duration-1000 ${heroAnim.inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
       >
         <div className="max-w-3xl">
           <span className="badge badge-gold">Cheklangan · {fmtMoney(targetCapital)} so&apos;m</span>
-          <h1 className="mt-5 text-4xl sm:text-5xl md:text-[3.5rem] font-bold leading-[1.08] tracking-tight text-text">
+          <h1 className="mt-4 text-3xl sm:text-5xl md:text-[3.5rem] font-bold leading-[1.08] tracking-tight text-text">
             {projectCount || "Ko&apos;p"} ta ishlaydigan IT loyihaga{" "}
             <span className="text-accent">investitsiya</span> qiling —<br />
             har oy <span className="text-gold">passiv daromad</span> oling
           </h1>
-          <p className="mt-6 text-lg text-text-secondary leading-relaxed max-w-2xl">
+          <p className="mt-4 text-base md:text-lg text-text-secondary leading-relaxed max-w-2xl">
             FathGroup real foydalanuvchilarga xizmat ko&apos;rsatadigan {projectCount || "bir nechta"} ta texnologik platformani birlashtiradi.
             Siz investitsiya qilasiz — loyihalar ishlaydi — daromadning <strong className="text-accent">80%</strong> investorlarga taqsimlanadi.
           </p>
         </div>
 
+        <div className="mobile-glance-panel md:hidden mt-4">
+          <div className="mobile-glance-row">
+            <span>Hozir fondda</span>
+            <strong>{fmtMoney(currentInvested)} so&apos;m</strong>
+          </div>
+          <div className="mobile-glance-row">
+            <span>Oylik daromad</span>
+            <strong>{fmtMoney(totalRevenueUzs)} so&apos;m</strong>
+          </div>
+          <div className="mobile-glance-row mobile-glance-highlight">
+            <span>{fmtMoney(investAmount)} so&apos;m kiritsangiz</span>
+            <strong>~{fmtMoney(Math.round(monthlyProfit))} so&apos;m/oy</strong>
+          </div>
+        </div>
+
         {/* Hero Stats Row */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="stat-box relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="stat-label">Faol loyihalar</div>
