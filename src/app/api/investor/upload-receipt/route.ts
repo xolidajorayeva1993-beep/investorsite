@@ -6,18 +6,35 @@ import * as store from "@/lib/store";
 
 export async function POST(req: NextRequest) {
   try {
-    const { login, password, receiptData, receiptNote } = await req.json();
+    const contentTypeHeader = req.headers.get("content-type") || "";
+    let login = "";
+    let password = "";
+    let receiptData: string | null = null;
+    let receiptNote = "";
+    let receiptFile: File | null = null;
+
+    if (contentTypeHeader.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      login = String(formData.get("login") || "");
+      password = String(formData.get("password") || "");
+      receiptNote = String(formData.get("receiptNote") || "");
+      const filePart = formData.get("receipt");
+      if (filePart instanceof File) {
+        receiptFile = filePart;
+      }
+    } else {
+      const body = await req.json();
+      login = String(body.login || "");
+      password = String(body.password || "");
+      receiptData = typeof body.receiptData === "string" ? body.receiptData : null;
+      receiptNote = String(body.receiptNote || "");
+    }
 
     if (!login || !password) {
       return NextResponse.json({ ok: false, error: "Login va parol kerak" }, { status: 400 });
     }
-    if (!receiptData) {
+    if (!receiptFile && !receiptData) {
       return NextResponse.json({ ok: false, error: "Chek rasmi yuborilmagan" }, { status: 400 });
-    }
-
-    // Base64 data validation (max ~5MB)
-    if (typeof receiptData !== "string" || receiptData.length > 7_000_000) {
-      return NextResponse.json({ ok: false, error: "Chek rasmi juda katta (max 5MB)" }, { status: 400 });
     }
 
     const cleanLogin = login.replace(/\s+/g, "");
@@ -38,16 +55,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const base64Match = receiptData.match(/^data:image\/(\w+);base64,(.+)$/);
-    const ext = base64Match ? base64Match[1] : "jpg";
-    const base64Content = base64Match ? base64Match[2] : receiptData;
-    const contentType = base64Match ? `image/${base64Match[1]}` : "image/jpeg";
+    let buffer: Buffer;
+    let receiptContentType = "image/jpeg";
+    let safeExt = "jpg";
 
-    const safeExt = ["jpg", "jpeg", "png", "webp"].includes(ext.toLowerCase()) ? ext.toLowerCase() : "jpg";
+    if (receiptFile) {
+      if (!receiptFile.type.startsWith("image/")) {
+        return NextResponse.json({ ok: false, error: "Faqat rasm formatidagi chek yuborish mumkin" }, { status: 400 });
+      }
+      if (receiptFile.size > 10 * 1024 * 1024) {
+        return NextResponse.json({ ok: false, error: "Chek rasmi juda katta (max 10MB)" }, { status: 400 });
+      }
+      receiptContentType = receiptFile.type || "image/jpeg";
+      const extFromName = receiptFile.name.includes(".")
+        ? receiptFile.name.split(".").pop()?.toLowerCase() || "jpg"
+        : "jpg";
+      safeExt = ["jpg", "jpeg", "png", "webp", "heic", "heif"].includes(extFromName)
+        ? extFromName
+        : "jpg";
+      buffer = Buffer.from(await receiptFile.arrayBuffer());
+    } else {
+      // Legacy base64 path
+      if (typeof receiptData !== "string" || receiptData.length > 14_000_000) {
+        return NextResponse.json({ ok: false, error: "Chek rasmi juda katta (max 10MB)" }, { status: 400 });
+      }
+      const base64Match = receiptData.match(/^data:image\/(\w+);base64,(.+)$/);
+      const ext = base64Match ? base64Match[1] : "jpg";
+      const base64Content = base64Match ? base64Match[2] : receiptData;
+      receiptContentType = base64Match ? `image/${base64Match[1]}` : "image/jpeg";
+      safeExt = ["jpg", "jpeg", "png", "webp", "heic", "heif"].includes(ext.toLowerCase()) ? ext.toLowerCase() : "jpg";
+      buffer = Buffer.from(base64Content, "base64");
+    }
+
     const fileName = `${app.id}_${Date.now()}.${safeExt}`;
-
-    const buffer = Buffer.from(base64Content, "base64");
-    const receiptUrl = await store.uploadToStorage("receipts", fileName, buffer, contentType);
+    const receiptUrl = await store.uploadToStorage("receipts", fileName, buffer, receiptContentType);
 
     await store.updateFields("applications", app.id, {
       status: "payment_uploaded",
@@ -60,6 +101,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, message: "Chek muvaffaqiyatli yuklandi" });
   } catch (err) {
     console.error("Chek yuklash xatosi:", err);
-    return NextResponse.json({ ok: false, error: "Server xatosi" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: err instanceof Error ? err.message : "Server xatosi" },
+      { status: 500 }
+    );
   }
 }

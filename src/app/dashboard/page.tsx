@@ -509,21 +509,19 @@ export default function DashboardPage() {
     setReceiptLoading(true);
     setReceiptMsg("");
     try {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(receiptFile);
-      });
+      if (receiptFile.size > 10 * 1024 * 1024) {
+        throw new Error("Chek rasmi juda katta (max 10MB)");
+      }
+
+      const fd = new FormData();
+      fd.append("login", authLogin);
+      fd.append("password", authPassword);
+      fd.append("receiptNote", receiptNote || "");
+      fd.append("receipt", receiptFile);
+
       const res = await fetch("/api/investor/upload-receipt", {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          login: authLogin,
-          password: authPassword,
-          receiptData: base64,
-          receiptNote: receiptNote,
-        }),
+        body: fd,
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error || "Xatolik");
