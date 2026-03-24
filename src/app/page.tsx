@@ -10,6 +10,13 @@ type HubData = {
   stats: AggregatedStats;
   fundraising: FundraisingStatus;
   footerSettings?: FooterSettings;
+  investorBreakdown?: {
+    id: string;
+    phoneLast4: string;
+    investmentAmountUzs: number;
+    sharePercent: number;
+    joinedDate: string;
+  }[];
 };
 
 type FooterSettings = {
@@ -222,10 +229,26 @@ export default function HomePage() {
   const monthlyProfit = totalRevenueUzs * (poolSharePct / 100);
   const yearlyProfit = monthlyProfit * 12;
 
-  const avgInvestmentPerInvestor = investorCount > 0 ? currentInvested / investorCount : 0;
-  const currentPerInvestorPct = currentInvested > 0 && investorCount > 0
-    ? (avgInvestmentPerInvestor / currentInvested) * INVESTOR_POOL_PCT : 0;
-  const currentPerInvestorProfit = totalRevenueUzs * (currentPerInvestorPct / 100);
+  const realInvestors = data?.investorBreakdown ?? [];
+  const existingInvestorsAfterJoin = realInvestors
+    .map((inv) => {
+      const fundSharePct = newTotalInvested > 0
+        ? (inv.investmentAmountUzs / newTotalInvested) * 100
+        : 0;
+      const effectiveSharePct = fundSharePct * INVESTOR_POOL_PCT / 100;
+      const monthlyProfitUzs = totalRevenueUzs * (effectiveSharePct / 100);
+      return {
+        ...inv,
+        fundSharePct,
+        effectiveSharePct,
+        monthlyProfitUzs,
+      };
+    })
+    .sort((a, b) => b.investmentAmountUzs - a.investmentAmountUzs);
+  const visibleInvestors = existingInvestorsAfterJoin.slice(0, 5);
+  const hiddenInvestorCount = Math.max(0, existingInvestorsAfterJoin.length - visibleInvestors.length);
+  const maxCurrentSharePct = realInvestors.reduce((max, inv) => Math.max(max, inv.sharePercent), 0);
+  const topCurrentInvestorProfit = totalRevenueUzs * (maxCurrentSharePct / 100);
 
   const heroAnim = useInView(0.1);
   const statsAnim = useInView(0.2);
@@ -698,8 +721,8 @@ export default function HomePage() {
                     <span className="font-mono font-bold">{investorCount} kishi</span>
                   </div>
                   <div className="flex justify-between items-center p-3 rounded-lg bg-accent/5 border border-accent/20">
-                    <span className="text-sm text-text-muted">Har biriga o&apos;rtacha oylik foyda</span>
-                    <span className="font-mono font-bold text-accent">{fmtMoney(Math.round(currentPerInvestorProfit))} so&apos;m</span>
+                    <span className="text-sm text-text-muted">Eng katta ulushli investor (hozir)</span>
+                    <span className="font-mono font-bold text-accent">{fmtMoney(Math.round(topCurrentInvestorProfit))} so&apos;m</span>
                   </div>
                 </>
               )}
@@ -927,20 +950,15 @@ export default function HomePage() {
                 </tr>
               </thead>
               <tbody>
-                {investorCount > 0 && Array.from({ length: Math.min(investorCount, 4) }).map((_, i) => {
-                  const avgInv = avgInvestmentPerInvestor;
-                  const pInPool = currentInvested > 0 ? (avgInv / (currentInvested + investAmount)) * 100 : 0;
-                  const pEff = pInPool * INVESTOR_POOL_PCT / 100;
-                  return (
-                    <tr key={`existing-${i}`}>
-                      <td className="text-text-muted">Investor {i + 1}</td>
-                      <td className="font-mono">{fmtMoney(Math.round(avgInv))} so&apos;m</td>
-                      <td className="font-mono">{pInPool.toFixed(1)}%</td>
-                      <td className="font-mono text-[#5856D6]">{pEff.toFixed(2)}%</td>
-                      <td className="text-right font-mono">{fmtMoney(Math.round(totalRevenueUzs * pEff / 100))} so&apos;m</td>
-                    </tr>
-                  );
-                })}
+                {visibleInvestors.map((inv, i) => (
+                  <tr key={`existing-${inv.id || i}`}>
+                    <td className="text-text-muted">Investor •••{inv.phoneLast4 || "0000"}</td>
+                    <td className="font-mono">{fmtMoney(Math.round(inv.investmentAmountUzs))} so&apos;m</td>
+                    <td className="font-mono">{inv.fundSharePct.toFixed(1)}%</td>
+                    <td className="font-mono text-[#5856D6]">{inv.effectiveSharePct.toFixed(2)}%</td>
+                    <td className="text-right font-mono">{fmtMoney(Math.round(inv.monthlyProfitUzs))} so&apos;m</td>
+                  </tr>
+                ))}
                 <tr className="bg-accent/5">
                   <td className="font-bold text-accent">Siz (yangi)</td>
                   <td className="font-mono font-bold">{fmtMoney(investAmount)} so&apos;m</td>
@@ -948,6 +966,13 @@ export default function HomePage() {
                   <td className="font-mono font-bold text-accent">{poolSharePct.toFixed(2)}%</td>
                   <td className="text-right font-mono font-bold text-accent">{fmtMoney(Math.round(monthlyProfit))} so&apos;m</td>
                 </tr>
+                {hiddenInvestorCount > 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-xs text-text-muted text-center">
+                      + yana {hiddenInvestorCount} ta investor (real ulushlar hisobga olingan)
+                    </td>
+                  </tr>
+                )}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-border-light">
@@ -961,26 +986,26 @@ export default function HomePage() {
             </table>
           </div>
           <div className="sm:hidden space-y-2">
-            {investorCount > 0 && Array.from({ length: Math.min(investorCount, 4) }).map((_, i) => {
-              const avgInv = avgInvestmentPerInvestor;
-              const pInPool = currentInvested > 0 ? (avgInv / (currentInvested + investAmount)) * 100 : 0;
-              const pEff = pInPool * INVESTOR_POOL_PCT / 100;
-              return (
-                <div key={`existing-mobile-${i}`} className="rounded-lg border border-border-light bg-bg p-3">
-                  <div className="text-sm font-bold text-text-muted">Investor {i + 1}</div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                    <span className="text-text-muted">Kiritgan pul</span>
-                    <span className="text-right font-mono">{fmtMoney(Math.round(avgInv))} so&apos;m</span>
-                    <span className="text-text-muted">Fond ichida</span>
-                    <span className="text-right font-mono">{pInPool.toFixed(1)}%</span>
-                    <span className="text-text-muted">Umumiy ulush</span>
-                    <span className="text-right font-mono text-[#5856D6]">{pEff.toFixed(2)}%</span>
-                    <span className="text-text-muted">Oylik foyda</span>
-                    <span className="text-right font-mono font-bold">{fmtMoney(Math.round(totalRevenueUzs * pEff / 100))} so&apos;m</span>
+            <div className="rounded-lg border border-border-light bg-bg p-3">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Investorlar (real ulushlar)</div>
+              <div className="space-y-1.5">
+                {visibleInvestors.map((inv, i) => (
+                  <div key={`existing-mobile-${inv.id || i}`} className="grid grid-cols-[1fr_auto] gap-2 text-xs border-b border-border-light last:border-0 pb-1.5 last:pb-0">
+                    <div>
+                      <div className="font-bold text-text-muted">Investor •••{inv.phoneLast4 || "0000"}</div>
+                      <div className="text-text-muted">{fmtMoney(Math.round(inv.investmentAmountUzs))} so&apos;m</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono text-[#5856D6]">{inv.effectiveSharePct.toFixed(2)}%</div>
+                      <div className="font-mono font-bold">{fmtMoney(Math.round(inv.monthlyProfitUzs))}</div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+              {hiddenInvestorCount > 0 && (
+                <div className="text-[11px] text-text-muted mt-2">+ yana {hiddenInvestorCount} ta investor</div>
+              )}
+            </div>
             <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
               <div className="text-sm font-bold text-accent">Siz (yangi)</div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs">

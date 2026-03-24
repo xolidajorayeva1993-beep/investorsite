@@ -72,6 +72,22 @@ export async function GET() {
         : 0,
     };
 
+    const investorBreakdown = activeInvestors
+      .map((a: Record<string, unknown>) => {
+        const investmentAmountUzs = Number(a.investmentAmountUzs) || 0;
+        const sharePercent = currentCapital > 0
+          ? (investmentAmountUzs / currentCapital) * 80
+          : 0;
+        return {
+          id: String(a.id || ""),
+          phoneLast4: String(a.phone || "").slice(-4),
+          investmentAmountUzs,
+          sharePercent,
+          joinedDate: String(a.activatedAt || a.createdAt || ""),
+        };
+      })
+      .sort((a, b) => b.investmentAmountUzs - a.investmentAmountUzs);
+
     const rawFooter = ownerSettings?.footer;
     const footerOverrides = (rawFooter && typeof rawFooter === "object")
       ? (rawFooter as Partial<FooterSettings>)
@@ -81,7 +97,7 @@ export async function GET() {
       ...footerOverrides,
     };
 
-    return NextResponse.json({ success: true, stats, fundraising, footerSettings });
+    return NextResponse.json({ success: true, stats, fundraising, footerSettings, investorBreakdown });
   } catch (err) {
     console.error("Hub stats xatosi:", err);
     return NextResponse.json(

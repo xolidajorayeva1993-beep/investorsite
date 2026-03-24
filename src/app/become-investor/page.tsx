@@ -156,7 +156,7 @@ export default function BecomeInvestorPage() {
 
     fetch("/api/owner")
       .then((r) => r.json())
-      .then((d) => { if (d.success && d.owner) setOwner(d.owner); })
+      .then((d) => { if ((d.ok || d.success) && d.owner) setOwner(d.owner); })
       .catch(() => {});
   }, []);
 
@@ -698,7 +698,7 @@ export default function BecomeInvestorPage() {
                         <div className="rounded-lg border border-border-light bg-bg p-2.5">
                           <div className="text-text-muted">Oylik foyda</div>
                           <div className="font-bold text-accent mt-0.5">
-                            {preview.monthlyProfit > 0 ? fmtMoney(Math.round(preview.monthlyProfit)) + " so&apos;m" : "—"}
+                            {preview.monthlyProfit > 0 ? fmtMoney(Math.round(preview.monthlyProfit)) + " so'm" : "—"}
                           </div>
                         </div>
                       </div>
