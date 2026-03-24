@@ -134,8 +134,6 @@ export default function BecomeInvestorPage() {
   const [confirmChecks, setConfirmChecks] = useState({
     readContract: false,
     agreeTerms: false,
-    understandRisks: false,
-    confirmIdentity: false,
   });
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
@@ -316,8 +314,6 @@ export default function BecomeInvestorPage() {
     return (
       confirmChecks.readContract &&
       confirmChecks.agreeTerms &&
-      confirmChecks.understandRisks &&
-      confirmChecks.confirmIdentity &&
       signatureMatches &&
       videoBlob !== null
     );
@@ -412,27 +408,39 @@ export default function BecomeInvestorPage() {
 
   /* ── Step navigation ── */
   const goNext = () => {
-    if (step === 4 && canSubmit) {
+    if (step === 1) {
+      setStep(4);
+    } else if (step === 4 && canSubmit) {
       generateContract();
       setStep(5);
     } else if (step === 5 && contractScrolled) {
       setStep(6);
-    } else if (step < 7 && step !== 4 && step !== 5) {
-      setStep((s) => Math.min(7, s + 1));
     }
   };
 
-  const goPrev = () => setStep((s) => Math.max(1, s - 1));
+  const goPrev = () => {
+    if (step === 4) setStep(1);
+    else if (step === 5) setStep(4);
+    else if (step === 6) setStep(5);
+    else setStep(1);
+  };
+
+  const getFunnelStep = (legacyStep: number) => {
+    if (legacyStep <= 3) return 1;
+    if (legacyStep === 4) return 2;
+    if (legacyStep === 5) return 3;
+    return 4;
+  };
+
+  const activeFunnelStep = getFunnelStep(step);
+  const funnelProgress = (activeFunnelStep / 4) * 100;
 
   /* ── Steps config ── */
   const steps = [
-    { id: 1, title: "Portfel", sub: `${stats?.projects?.length ?? 0} ta platforma`, icon: "📊" },
-    { id: 2, title: "Kalkulyator", sub: "Daromad hisoblash", icon: "\u{1F9EE}" },
-    { id: 3, title: "Shartlar", sub: "20/80 qoida", icon: "\u{1F4CB}" },
-    { id: 4, title: "Ariza", sub: "Ma\u2019lumotlar", icon: "\u{1F4DD}" },
-    { id: 5, title: "Shartnoma", sub: "Rasmiy hujjat", icon: "\u{1F4C4}" },
-    { id: 6, title: "Tasdiqlash", sub: "Imzo va video", icon: "\u2705" },
-    { id: 7, title: "Tayyor", sub: "Natija", icon: "\u{1F389}" },
+    { id: 1, title: "Loyiha va daromad", sub: "Portfel + kalkulyator", icon: "📊", targetStep: 1 },
+    { id: 2, title: "Ariza", sub: "Ma'lumotlar", icon: "\u{1F4DD}", targetStep: 4 },
+    { id: 3, title: "Shartnoma", sub: "Rasmiy hujjat", icon: "\u{1F4C4}", targetStep: 5 },
+    { id: 4, title: "Tasdiqlash", sub: "Imzo va video", icon: "\u2705", targetStep: 6 },
   ];
 
   const inputCls =
@@ -455,7 +463,7 @@ export default function BecomeInvestorPage() {
           Investor <span className="text-accent">bo&apos;lish</span>
         </h1>
         <p className="text-text-secondary mt-2">
-          7 qadam &mdash; portfel, kalkulyator, shartlar, ariza, shartnoma, tasdiqlash, natija.
+          4 qadamda ariza: loyiha va daromad, ariza, shartnoma, tasdiqlash.
         </p>
       </section>
 
@@ -469,15 +477,15 @@ export default function BecomeInvestorPage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 gap-1.5">
               {steps.map((s) => {
-                const isActive = step === s.id;
-                const isDone = step > s.id;
+                const isActive = activeFunnelStep === s.id;
+                const isDone = activeFunnelStep > s.id;
                 return (
                   <button
                     key={s.id}
                     onClick={() => {
-                      if (isDone || isActive) setStep(s.id);
+                      if (isDone || isActive) setStep(s.targetStep);
                     }}
-                    disabled={step < s.id}
+                    disabled={activeFunnelStep < s.id}
                     className={`text-left px-2.5 py-2 rounded-xl border transition-all w-full min-w-0 ${
                       isActive
                         ? "border-accent bg-accent/10"
@@ -514,15 +522,15 @@ export default function BecomeInvestorPage() {
             <div className="mt-4 hidden lg:block">
               <div className="flex justify-between text-xs text-text-muted mb-1.5">
                 <span>Jarayon</span>
-                <span className="font-bold text-accent">{Math.round((step / 7) * 100)}%</span>
+                <span className="font-bold text-accent">{Math.round(funnelProgress)}%</span>
               </div>
               <div className="progress-track">
-                <div className="progress-fill" style={{ width: `${(step / 7) * 100}%` }} />
+                <div className="progress-fill" style={{ width: `${funnelProgress}%` }} />
               </div>
             </div>
 
             {/* Quick stats */}
-            {investAmt > 0 && step >= 2 && (
+            {investAmt > 0 && activeFunnelStep >= 2 && (
               <div className="mt-5 hidden lg:block space-y-2 pt-4 border-t border-border-light">
                 <div className="text-xs text-text-muted uppercase tracking-wider font-bold mb-2">
                   Sizning investitsiyangiz
@@ -551,13 +559,13 @@ export default function BecomeInvestorPage() {
           <div className="card-elevated min-h-[520px]">
             {/* Step header */}
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
-              <div className="step-num">{steps[step - 1].icon}</div>
+              <div className="step-num">{steps[activeFunnelStep - 1].icon}</div>
               <div>
-                <h2 className="text-lg font-bold">{steps[step - 1].title}</h2>
-                <p className="text-sm text-text-muted">{steps[step - 1].sub}</p>
+                <h2 className="text-lg font-bold">{steps[activeFunnelStep - 1].title}</h2>
+                <p className="text-sm text-text-muted">{steps[activeFunnelStep - 1].sub}</p>
               </div>
               <span className="ml-auto text-xs text-text-muted bg-surface px-2.5 py-1 rounded-full">
-                {step}/7
+                {activeFunnelStep}/4
               </span>
             </div>
 
@@ -565,8 +573,8 @@ export default function BecomeInvestorPage() {
             {step === 1 && (
               <div>
                 <p className="text-text-secondary text-sm mb-6">
-                  FathGroup {stats?.projects?.length ?? 0} ta mustaqil IT platformani birlashtiradi. Har biri haqiqiy mijozlarga xizmat ko&apos;rsatadi
-                  va API orqali real daromad keltirilmoqda.
+                  3 daqiqada ariza yuborishingiz uchun asosiy ma&apos;lumotlar quyida jamlangan:
+                  real platformalar, tez kalkulyator va muhim qoidalar.
                 </p>
 
                 {loading ? (
@@ -648,6 +656,62 @@ export default function BecomeInvestorPage() {
                     </div>
                     <div className="mt-4 p-3 rounded-xl bg-accent/5 text-sm text-text-secondary">
                       {"\u{1F4E1}"} Barcha raqamlar real API orqali yangilanadi &mdash; qo&apos;lda hech narsa kiritilmagan.
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-border-light bg-white p-4">
+                      <div className="text-sm font-bold">Tez kalkulyator</div>
+                      <p className="text-xs text-text-muted mt-1 mb-3">Mablag&apos; kiriting va taxminiy ulushingizni ko&apos;ring.</p>
+
+                      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mb-3">
+                        {PRESETS.map((amt) => (
+                          <button
+                            key={amt}
+                            onClick={() => setPreviewAmount(amt)}
+                            className={`calc-preset ${previewAmount === amt ? "active" : ""}`}
+                          >
+                            {fmtShort(amt)}
+                          </button>
+                        ))}
+                      </div>
+
+                      <input
+                        type="range"
+                        min={1_000_000}
+                        max={250_000_000}
+                        step={500_000}
+                        value={previewAmount}
+                        onChange={(e) => setPreviewAmount(Number(e.target.value))}
+                        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-border
+                          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+                          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:cursor-pointer"
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 text-xs">
+                        <div className="rounded-lg border border-border-light bg-bg p-2.5">
+                          <div className="text-text-muted">Miqdor</div>
+                          <div className="font-bold mt-0.5">{fmtMoney(previewAmount)} so&apos;m</div>
+                        </div>
+                        <div className="rounded-lg border border-border-light bg-bg p-2.5">
+                          <div className="text-text-muted">Ulush</div>
+                          <div className="font-bold text-accent mt-0.5">{preview.poolSharePct.toFixed(2)}%</div>
+                        </div>
+                        <div className="rounded-lg border border-border-light bg-bg p-2.5">
+                          <div className="text-text-muted">Oylik foyda</div>
+                          <div className="font-bold text-accent mt-0.5">
+                            {preview.monthlyProfit > 0 ? fmtMoney(Math.round(preview.monthlyProfit)) + " so&apos;m" : "—"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-border-light bg-white p-4">
+                      <div className="text-sm font-bold mb-2">Asosiy qoidalar</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-text-secondary">
+                        <div className="rounded-lg border border-border-light bg-bg p-2.5">20% loyiha rahbariga, 80% investorlarga taqsimlanadi.</div>
+                        <div className="rounded-lg border border-border-light bg-bg p-2.5">Ulush dinamik: yangi investor kelganda qayta hisoblanadi.</div>
+                        <div className="rounded-lg border border-border-light bg-bg p-2.5">To&apos;lovlar odatda har oy 25-sanadan keyin beriladi.</div>
+                        <div className="rounded-lg border border-border-light bg-bg p-2.5">Jami fond 500 mln so&apos;mga yetganda qabul yopiladi.</div>
+                      </div>
                     </div>
                   </>
                 )}
@@ -772,7 +836,7 @@ export default function BecomeInvestorPage() {
             {step === 4 && (
               <div className="space-y-4">
                 <p className="text-text-secondary text-sm mb-4">
-                  Ma&apos;lumotlaringizni kiriting. Pasport ma&apos;lumotlari shartnomada ko&apos;rsatiladi.
+                  Formani to&apos;ldiring. Ma&apos;lumotlar shartnomaga avtomatik kiritiladi.
                 </p>
 
                 <div>
@@ -956,8 +1020,8 @@ export default function BecomeInvestorPage() {
             {step === 5 && (
               <div>
                 <p className="text-text-secondary text-sm mb-4">
-                  Quyida sizning ma&apos;lumotlaringiz asosida tayyorlangan rasmiy investitsiya shartnomasi.
-                  Shartnomani <strong className="text-text">oxirigacha</strong> o&apos;qib chiqing.
+                  Sizning ma&apos;lumotlaringiz asosida shartnoma tayyorlandi.
+                  Davom etish uchun <strong className="text-text">oxirigacha</strong> o&apos;qing.
                 </p>
 
                 <div
@@ -1134,7 +1198,7 @@ export default function BecomeInvestorPage() {
                 {/* Scroll indicator */}
                 {!contractScrolled && (
                   <div className="mt-3 text-center text-xs text-text-muted animate-pulse">
-                    {"\u2193"} Shartnomani oxirigacha o&apos;qing {"\u2193"}
+                    {"\u2193"} Oxirigacha o&apos;qing {"\u2193"}
                   </div>
                 )}
                 {contractScrolled && (
@@ -1149,8 +1213,7 @@ export default function BecomeInvestorPage() {
             {step === 6 && (
               <div className="space-y-6">
                 <p className="text-text-secondary text-sm">
-                  Shartnomani tasdiqlash uchun quyidagi barcha bosqichlarni bajaring.
-                  Bu sizning himoyangiz uchun &mdash; soxtalashtirish oldini oladi.
+                  Arizani yakunlash uchun 3 tasdiqni bajaring: rozilik, imzo, video.
                 </p>
 
                 {/* A) Rozilik belgilari */}
@@ -1160,9 +1223,7 @@ export default function BecomeInvestorPage() {
                   </div>
                   {[
                     { key: "readContract" as const, text: `Investitsiya shartnomasi \u2116${contractId} ni to\u2019liq o\u2019qib chiqdim` },
-                    { key: "agreeTerms" as const, text: "20/80 foyda taqsimoti va barcha shartlarga roziman" },
-                    { key: "understandRisks" as const, text: "Investitsiya risklari borligini tushunaman va qabul qilaman" },
-                    { key: "confirmIdentity" as const, text: `Kiritgan ma\u2019lumotlarim to\u2019g\u2019ri va men ${form.fullName || "___"}man` },
+                    { key: "agreeTerms" as const, text: "20/80 qoidasi, risklar va ma’lumotlarim to‘g‘riligini tasdiqlayman" },
                   ].map((item) => (
                     <label
                       key={item.key}
@@ -1215,7 +1276,7 @@ export default function BecomeInvestorPage() {
                     3. Video tasdiqlash
                   </div>
                   <p className="text-xs text-text-muted mb-3">
-                    Qisqa video yozib oling. Quyidagi matnni o&apos;qing:
+                    3-15 soniyalik video yozib, quyidagi matnni o&apos;qing:
                   </p>
 
                   <div className="p-4 rounded-xl bg-accent/5 border border-accent/15 mb-4">
@@ -1318,7 +1379,7 @@ export default function BecomeInvestorPage() {
 
                 {!confirmReady && (
                   <p className="text-xs text-text-muted text-center">
-                    Yuborish uchun barcha 3 bosqichni bajaring: rozilik, imzo, video
+                    Yuborish uchun barcha tasdiqlar to&apos;liq bo&apos;lishi kerak
                   </p>
                 )}
               </div>
@@ -1549,13 +1610,13 @@ export default function BecomeInvestorPage() {
                 >
                   {"\u2190"} Orqaga
                 </button>
-                {step < 6 && (
+                {[1, 4, 5].includes(step) && (
                   <button
                     onClick={goNext}
                     disabled={(step === 4 && !canSubmit) || (step === 5 && !contractScrolled)}
                     className="btn-primary py-2.5 px-6 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    {step === 3 ? "Arizaga" : step === 4 ? "Shartnomani ko\u2019rish" : step === 5 ? "Tasdiqlashga" : "Keyingisi"} {"\u2192"}
+                    {step === 1 ? "Arizaga" : step === 4 ? "Shartnomani ko\u2019rish" : "Tasdiqlashga"} {"\u2192"}
                   </button>
                 )}
               </div>
