@@ -31,6 +31,13 @@ if (!getApps().length) {
   const projectId = process.env.FIREBASE_PROJECT_ID || "fathai-d90bc";
   const storageBucket =
     process.env.FIREBASE_STORAGE_BUCKET || `${projectId}.firebasestorage.app`;
+  
+  console.log("Initializing Firebase Admin SDK", {
+    hasServiceAccount: !!sa,
+    projectId,
+    storageBucket,
+  });
+  
   if (sa) {
     initializeApp({ credential: cert(sa), projectId, storageBucket });
   } else {

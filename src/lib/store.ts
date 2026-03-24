@@ -29,7 +29,9 @@ function getBucketCandidates(): string[] {
     projectId ? `${projectId}.appspot.com` : null,
   ].filter((v): v is string => Boolean(v));
 
-  return Array.from(new Set(candidates));
+  const buckets = Array.from(new Set(candidates));
+  console.log("getBucketCandidates", { projectId, fromEnv, buckets });
+  return buckets;
 }
 
 /** Read all documents from a collection as an array, sorted by _createdAt */
@@ -170,24 +172,36 @@ export async function uploadToStorage(
   const { getStorage } = await import("firebase-admin/storage");
   const storage = getStorage();
   let lastError: unknown = null;
+  const candidates = getBucketCandidates();
 
-  for (const bucketName of getBucketCandidates()) {
+  console.log("uploadToStorage started", { folder, fileName, bufferSize: buffer.length, contentType, bucketCandidates: candidates });
+
+  for (const bucketName of candidates) {
     try {
+      console.log(`Trying bucket: ${bucketName}`);
       const file = storage.bucket(bucketName).file(`${folder}/${fileName}`);
       await file.save(buffer, { metadata: { contentType } });
+      console.log(`File saved to ${bucketName}/${folder}/${fileName}`);
+      
       const [url] = await file.getSignedUrl({
         action: "read",
         expires: "2099-01-01",
       });
+      console.log("Signed URL generated successfully");
       return url;
     } catch (err) {
+      console.warn(`Bucket ${bucketName} failed:`, err);
       lastError = err;
     }
   }
 
-  throw lastError instanceof Error
-    ? lastError
-    : new Error("Storage bucket topilmadi yoki faylni saqlab bo'lmadi");
+  const errorMsg = lastError instanceof Error
+    ? `${lastError.constructor.name}: ${lastError.message}`
+    : String(lastError);
+  
+  throw new Error(
+    `Storage bucket topilmadi yoki faylni saqlab bo'lmadi (${candidates.length} ta bucket sinandi: ${errorMsg})`
+  );
 }
 
 /** Get a short-lived (~1h) signed URL for an existing Storage file */

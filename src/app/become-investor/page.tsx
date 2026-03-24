@@ -329,6 +329,24 @@ export default function BecomeInvestorPage() {
     setSubmitting(true);
     setSubmitError("");
     try {
+      // Video validation
+      if (!videoBlob) {
+        throw new Error("Video yozilmagan!");
+      }
+      if (videoBlob.size === 0) {
+        throw new Error("Video bo'sh bo'lib qoldi, iltimos qayta yozib ko'ring");
+      }
+      if (recordingTime < 1) {
+        throw new Error("Video juda qisqa, kamida 1 soniya kerak");
+      }
+
+      console.log("Starting application submission", {
+        investAmt,
+        poolShare,
+        videoSize: videoBlob.size,
+        recordingTime,
+      });
+
       const res = await fetch("/api/investor/apply", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -355,13 +373,32 @@ export default function BecomeInvestorPage() {
 
       // Upload video confirmation
       if (videoBlob && payload.data?.applicationId) {
+        // Firestore yozilishiga vaqt berish uchun kichik delay
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         const fd = new FormData();
         fd.append("video", videoBlob, "confirmation.webm");
         fd.append("applicationId", payload.data.applicationId);
+
+        console.log("Video upload starting", {
+          applicationId: payload.data.applicationId,
+          videoSize: videoBlob.size,
+          videoType: videoBlob.type,
+        });
+
         const videoRes = await fetch("/api/investor/upload-video", { method: "POST", body: fd });
-        const videoPayload = await videoRes.json().catch(() => ({}));
+        const videoPayload = await videoRes.json().catch(() => ({
+          ok: false,
+          error: "Serverdan javob olish mumkin bo'lmadi",
+        }));
+
+        console.log("Video upload response", { ok: videoRes.ok, payload: videoPayload });
+
         if (!videoRes.ok || !videoPayload.ok) {
-          throw new Error(videoPayload.error || "Video tasdiqni yuborishda xatolik");
+          throw new Error(
+            videoPayload.error ||
+              `Video saqlashda xatolik (${videoRes.status})`
+          );
         }
       }
 
