@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import BrandLogo from "@/components/BrandLogo";
+
+const ADMIN_SESSION_KEY = "investorsite_admin_secret";
 
 /* ═══════════ TYPES ═══════════ */
 type Investor = {
@@ -206,6 +208,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 /* ═══════════ MAIN ═══════════ */
 export default function AdminPage() {
+  const restoreOnceRef = useRef(false);
   const [secret, setSecret] = useState("");
   const [authed, setAuthed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -328,9 +331,34 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
     const ok = await fetchData(secret.trim());
-    if (ok) setAuthed(true);
+    if (ok) {
+      setAuthed(true);
+      localStorage.setItem(ADMIN_SESSION_KEY, secret.trim());
+    }
     setLoading(false);
   };
+
+  /* ── Restore session on refresh ── */
+  useEffect(() => {
+    if (restoreOnceRef.current) return;
+    restoreOnceRef.current = true;
+
+    const saved = localStorage.getItem(ADMIN_SESSION_KEY);
+    if (!saved) return;
+
+    setSecret(saved);
+    setLoading(true);
+    setError("");
+    fetchData(saved)
+      .then((ok) => {
+        if (ok) {
+          setAuthed(true);
+        } else {
+          localStorage.removeItem(ADMIN_SESSION_KEY);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [fetchData]);
 
   /* ── Auto refresh every 30s ── */
   useEffect(() => {
@@ -459,7 +487,7 @@ export default function AdminPage() {
         <nav className="flex items-center gap-1">
           <Link href="/" className="nav-link">Sayt</Link>
           <Link href="/dashboard" className="nav-link">Kabinet</Link>
-          <button onClick={() => { setAuthed(false); setSecret(""); setData(null); }} className="nav-link text-text-muted hover:text-danger">
+          <button onClick={() => { localStorage.removeItem(ADMIN_SESSION_KEY); setAuthed(false); setSecret(""); setData(null); }} className="nav-link text-text-muted hover:text-danger">
             Chiqish
           </button>
         </nav>

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BrandLogo from "@/components/BrandLogo";
+
+const INVESTOR_SESSION_KEY = "investorsite_investor_session";
 
 /* ═══════════════ TYPES ═══════════════ */
 type ProjectInfo = {
@@ -185,6 +187,7 @@ function formatDateTime(iso: string): string {
 
 /* ═══════════════ MAIN ═══════════════ */
 export default function DashboardPage() {
+  const restoreOnceRef = useRef(false);
   /* ── Auth state ── */
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
@@ -255,12 +258,65 @@ export default function DashboardPage() {
       setData(json.data);
       setAuthLogin(login.trim());
       setAuthPassword(password.trim());
+      localStorage.setItem(
+        INVESTOR_SESSION_KEY,
+        JSON.stringify({ login: login.trim(), password: password.trim() })
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Xatolik yuz berdi");
     } finally {
       setLoading(false);
     }
   };
+
+  /* ── Restore session on refresh ── */
+  useEffect(() => {
+    if (restoreOnceRef.current) return;
+    restoreOnceRef.current = true;
+
+    const raw = localStorage.getItem(INVESTOR_SESSION_KEY);
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw) as { login?: string; password?: string };
+      const savedLogin = (parsed.login || "").trim();
+      const savedPassword = (parsed.password || "").trim();
+      if (!savedLogin || !savedPassword) {
+        localStorage.removeItem(INVESTOR_SESSION_KEY);
+        return;
+      }
+
+      setLogin(savedLogin);
+      setPassword(savedPassword);
+      setAuthLogin(savedLogin);
+      setAuthPassword(savedPassword);
+
+      setLoading(true);
+      fetch("/api/investor/status", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ login: savedLogin, password: savedPassword }),
+      })
+        .then((r) => r.json().then((json) => ({ ok: r.ok, json })))
+        .then(({ ok, json }) => {
+          if (!ok || !json.ok) {
+            localStorage.removeItem(INVESTOR_SESSION_KEY);
+            setAuthLogin("");
+            setAuthPassword("");
+            return;
+          }
+          setData(json.data);
+        })
+        .catch(() => {
+          localStorage.removeItem(INVESTOR_SESSION_KEY);
+          setAuthLogin("");
+          setAuthPassword("");
+        })
+        .finally(() => setLoading(false));
+    } catch {
+      localStorage.removeItem(INVESTOR_SESSION_KEY);
+    }
+  }, []);
 
   /* ── Refresh data ── */
   const refreshData = useCallback(async () => {
@@ -495,6 +551,7 @@ export default function DashboardPage() {
 
   /* ── Logout ── */
   const handleLogout = () => {
+    localStorage.removeItem(INVESTOR_SESSION_KEY);
     setData(null);
     setLogin("");
     setPassword("");
