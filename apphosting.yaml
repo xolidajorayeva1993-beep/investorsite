@@ -9,6 +9,9 @@ env:
   - variable: FIREBASE_PROJECT_ID
     value: fathai-d90bc
 
+  - variable: FIREBASE_STORAGE_BUCKET
+    value: fathai-d90bc.appspot.com
+
   - variable: CAMPAIGN_TARGET_UZS
     value: "500000000"
 
