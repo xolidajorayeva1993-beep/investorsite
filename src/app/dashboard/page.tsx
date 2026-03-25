@@ -608,6 +608,26 @@ export default function DashboardPage() {
     return (data.yearlyProfit / data.investmentAmountUzs) * 100;
   }, [data]);
 
+  /* ── Joriy to'lov sikli ── */
+  const cycleDays = useMemo(() => {
+    const uzNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tashkent" }));
+    const uzDay = uzNow.getDate();
+    const uzMonth = uzNow.getMonth();
+    const uzYear = uzNow.getFullYear();
+    let csMonth = uzMonth, csYear = uzYear;
+    if (uzDay < 25) { csMonth = uzMonth === 0 ? 11 : uzMonth - 1; csYear = uzMonth === 0 ? uzYear - 1 : uzYear; }
+    const cycleStart = new Date(Date.UTC(csYear, csMonth, 25, 3, 0, 0));
+    const ceMonth = uzDay >= 25 ? (uzMonth === 11 ? 0 : uzMonth + 1) : uzMonth;
+    const ceYear = uzDay >= 25 ? (uzMonth === 11 ? uzYear + 1 : uzYear) : uzYear;
+    const cycleEnd = new Date(Date.UTC(ceYear, ceMonth, 25, 3, 0, 0));
+    const totalMs = cycleEnd.getTime() - cycleStart.getTime();
+    const elapsedMs = Math.max(0, Date.now() - cycleStart.getTime());
+    const totalDays = Math.round(totalMs / 86400000);
+    const elapsedDays = Math.min(totalDays, Math.floor(elapsedMs / 86400000));
+    const pct = Math.min(100, Math.round((elapsedMs / totalMs) * 100));
+    return { cycleStart, cycleEnd, totalDays, elapsedDays, pct };
+  }, []);
+
   /* ═══════════════ LOGIN SCREEN ═══════════════ */
   if (!data) {
     return (
@@ -909,6 +929,63 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-bold tracking-tight">Salom, {data.fullName.split(" ")[0]}</h1>
               <p className="text-text-secondary mt-1 text-sm">Portfelingiz — {data.activatedAt ? formatDate(data.activatedAt) : formatDate(data.createdAt)} dan beri faol</p>
 
+          {/* ═══ Joriy sikl kartasi ═══ */}
+          <div className="card-elevated mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Joriy to&apos;lov sikli</div>
+                <div className="text-sm font-bold mt-1">
+                  {formatDate(cycleDays.cycleStart.toISOString())} → {formatDate(cycleDays.cycleEnd.toISOString())}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-text-muted">25-sanagacha qoldi</div>
+                <div className="text-xl font-bold text-accent">{cycleDays.totalDays - cycleDays.elapsedDays} <span className="text-sm font-normal text-text-muted">kun</span></div>
+              </div>
+            </div>
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${Math.max(cycleDays.pct, 2)}%` }} />
+            </div>
+            <div className="flex justify-between mt-1.5 text-xs text-text-muted">
+              <span>{cycleDays.elapsedDays} kun o&apos;tdi</span>
+              <span>{cycleDays.pct}% tugallandi</span>
+            </div>
+            {/* 3 asosiy raqam */}
+            <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-border-light text-center">
+              <div>
+                <div className="text-xs text-text-muted mb-1">Investitsiyam</div>
+                <div className="text-lg font-bold">{fmtShort(data.investmentAmountUzs)}</div>
+                <div className="text-xs text-text-muted">so&apos;m</div>
+              </div>
+              <div>
+                <div className="text-xs text-text-muted mb-1">
+                  {data.isEligibleThisCycle === false ? "Foydaga kirish" : "Bu oy taxmin"}
+                </div>
+                <div className="text-lg font-bold text-gold">
+                  {data.isEligibleThisCycle === false
+                    ? (data.profitEligibleFrom ? formatDate(data.profitEligibleFrom) : "—")
+                    : fmtShort(data.estimatedMonthlyProfit || 0)}
+                </div>
+                <div className="text-xs text-text-muted">
+                  {data.isEligibleThisCycle === false ? "sanasidan" : "so\u2019m · 25-sana to\u2019lanadi"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-text-muted mb-1">Balansim</div>
+                <div className="text-lg font-bold text-green">{fmtShort(data.balance || 0)}</div>
+                <div className="text-xs text-text-muted">so&apos;m</div>
+              </div>
+            </div>
+            {/* Yangi sikl banner */}
+            {cycleDays.elapsedDays <= 3 && (data.lastDistributionData?.myAmount || 0) > 0 && (
+              <div className="mt-3 p-3 rounded-lg bg-accent/5 border border-accent/20 text-xs text-text-secondary">
+                📅 Yangi to&apos;lov sikli {cycleDays.elapsedDays === 0 ? "bugun" : `${cycleDays.elapsedDays} kun oldin`} boshlandi.
+                Loyihalar yangi oy uchun daromad yig&apos;a boshladi — &quot;Bu oy taxmin&quot; asta oshib boradi.
+                O&apos;tgan oyda siz <strong className="text-accent">{fmtMoney(data.lastDistributionData?.myAmount ?? 0)} so&apos;m</strong> olgan edingiz.
+              </div>
+            )}
+          </div>
+
           {/* ═══ 13 KPI Professional Grid ═══ */}
           {/* Row 1: Investitsiya */}
           <div className="mt-6">
@@ -949,7 +1026,10 @@ export default function DashboardPage() {
               <div className="stat-box">
                 <div className="stat-label">Sizga to'lanadigan (taxmin)</div>
                 <div className="stat-value text-gold">{fmtShort(data.estimatedMonthlyProfit || 0)}</div>
-                <div className="text-xs text-text-muted mt-1">25-sana pul olasiz</div>
+                <div className="text-xs text-text-muted mt-1">25-sana to&apos;lanadi</div>
+                {cycleDays.elapsedDays <= 10 && (
+                  <div className="text-[10px] text-gold/70 mt-0.5 leading-tight">Oy boshida kichik, oshib boradi</div>
+                )}
               </div>
             </div>
           </div>
@@ -1993,7 +2073,47 @@ export default function DashboardPage() {
         <div className="mt-6">
           <span className="badge badge-section">Tarix</span>
           <h2 className="text-2xl font-bold tracking-tight">Tranzaksiya tarixi</h2>
-          <p className="text-text-secondary mt-1 mb-6 text-sm">Barcha operatsiyalaringiz ro&apos;yxati</p>
+          <p className="text-text-secondary mt-1 mb-4 text-sm">Barcha operatsiyalaringiz ro&apos;yxati</p>
+
+          {/* ── Oyma-oy foyda taqsimot tarixi ── */}
+          {(() => {
+            const profitTxs = (data.transactions as Transaction[]).filter((tx) => tx.type === "profit");
+            if (profitTxs.length === 0) return null;
+            const byMonth: Record<string, { month: string; total: number; date: string }> = {};
+            profitTxs.forEach((tx) => {
+              const d = new Date(tx.createdAt);
+              const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+              if (!byMonth[key]) byMonth[key] = { month: key, total: 0, date: tx.createdAt };
+              byMonth[key].total += tx.amount;
+            });
+            const months = Object.values(byMonth).sort((a, b) => b.month.localeCompare(a.month));
+            const grandTotal = months.reduce((s, m) => s + m.total, 0);
+            return (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Oylik foyda tarixi</div>
+                  <div className="text-xs font-bold text-green">Jami: {fmtMoney(grandTotal)} so&apos;m</div>
+                </div>
+                <div className="space-y-2">
+                  {months.map(({ month, total, date }) => (
+                    <div key={month} className="flex items-center justify-between p-3 rounded-lg bg-bg border border-green/20">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-green/10 flex items-center justify-center text-green text-sm font-bold">✓</div>
+                        <div>
+                          <div className="text-sm font-bold">{month}</div>
+                          <div className="text-xs text-text-muted">{formatDateTime(date)}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono font-bold text-green">+{fmtMoney(total)}</div>
+                        <div className="text-xs text-text-muted">so&apos;m sizga</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {data.transactions.length > 0 ? (
             <div className="card p-0 overflow-hidden">
