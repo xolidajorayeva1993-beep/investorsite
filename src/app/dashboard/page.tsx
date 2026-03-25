@@ -40,6 +40,25 @@ type Transaction = {
   createdAt: string;
 };
 
+type DistributionRecipient = {
+  investorId: string;
+  fullName: string;
+  phoneLast4: string;
+  amount: number;
+  sharePct: number;
+};
+
+type DistributionMonth = {
+  monthKey: string;
+  distributedAt: string;
+  monthlyRevenue: number;
+  netRevenue: number;
+  investorPool: number;
+  creatorShare: number;
+  investorCount: number;
+  recipients: DistributionRecipient[];
+};
+
 type InvestorData = {
   id: string;
   fullName: string;
@@ -103,6 +122,7 @@ type InvestorData = {
     distributedAt: string;
     investorCount: number;
   };
+  distributionHistory?: DistributionMonth[];
   profitEligibleFrom?: string | null;
   isEligibleThisCycle?: boolean;
 };
@@ -139,7 +159,7 @@ type NotificationItem = {
   isRead: boolean;
 };
 
-type Tab = "overview" | "investors" | "portfolio" | "balance" | "expenses" | "invest" | "contract" | "history" | "settings";
+type Tab = "overview" | "investors" | "portfolio" | "balance" | "expenses" | "invest" | "contract" | "distributions" | "history" | "settings";
 
 type OwnerData = {
   fullName: string;
@@ -702,6 +722,7 @@ export default function DashboardPage() {
     { key: "expenses", label: "Sarflar" },
     { key: "invest", label: "Qo'shish" },
     { key: "contract", label: "Shartnoma" },
+    { key: "distributions", label: "Taqsimotlar" },
     { key: "history", label: "Tarix" },
     { key: "settings", label: "Sozlamalar" },
   ] : [
@@ -2099,6 +2120,96 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ═══════ DISTRIBUTIONS TAB ═══════ */}
+      {activeTab === "distributions" && (
+        <div className="mt-6">
+          <span className="badge badge-section">Taqsimotlar</span>
+          <h2 className="text-2xl font-bold tracking-tight">Oyma-oy foyda taqsimoti</h2>
+          <p className="text-text-secondary mt-1 mb-6 text-sm">Har oyda kim qancha foyda olgani shu sahifada to'liq ko'rinadi.</p>
+
+          {data.distributionHistory && data.distributionHistory.length > 0 ? (
+            <div className="space-y-4">
+              {data.distributionHistory.map((m) => (
+                <div key={m.monthKey} className="card-elevated">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                    <div>
+                      <div className="text-xs font-bold text-text-muted uppercase tracking-wider">{m.monthKey}</div>
+                      <div className="text-sm text-text-secondary mt-0.5">Taqsimlangan sana: {m.distributedAt ? formatDateTime(m.distributedAt) : "—"}</div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                      <div className="p-2 rounded bg-bg border border-border">
+                        <div className="text-text-muted">Oylik daromad</div>
+                        <div className="font-mono font-bold">{fmtShort(m.monthlyRevenue)}</div>
+                      </div>
+                      <div className="p-2 rounded bg-bg border border-border">
+                        <div className="text-text-muted">Toza summa</div>
+                        <div className="font-mono font-bold">{fmtShort(m.netRevenue)}</div>
+                      </div>
+                      <div className="p-2 rounded bg-green/5 border border-green/20">
+                        <div className="text-text-muted">Investorlar fondi</div>
+                        <div className="font-mono font-bold text-green">{fmtShort(m.investorPool)}</div>
+                      </div>
+                      <div className="p-2 rounded bg-bg border border-border">
+                        <div className="text-text-muted">Asoschi ulushi</div>
+                        <div className="font-mono font-bold">{fmtShort(m.creatorShare)}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Investorlar ro'yxati ({m.investorCount} kishi)</div>
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Investor</th>
+                          <th>Telefon</th>
+                          <th>Ulushi</th>
+                          <th className="text-right">Olgan foyda</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {m.recipients.length > 0 ? m.recipients.map((r) => (
+                          <tr key={`${m.monthKey}-${r.investorId}`}>
+                            <td className="font-bold">{r.fullName}</td>
+                            <td className="text-text-muted">****{r.phoneLast4 || "—"}</td>
+                            <td className="font-mono">{r.sharePct.toFixed(2)}%</td>
+                            <td className="text-right font-mono font-bold text-green">+{fmtMoney(r.amount)} so&apos;m</td>
+                          </tr>
+                        )) : (
+                          <tr><td colSpan={4} className="text-center text-text-muted">Bu oy investorlarga taqsimot bo'lmagan</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="md:hidden space-y-2">
+                    {m.recipients.length > 0 ? m.recipients.map((r) => (
+                      <div key={`${m.monthKey}-${r.investorId}`} className="p-3 rounded-lg bg-bg border border-border">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold">{r.fullName}</span>
+                          <span className="text-sm font-mono font-bold text-green">+{fmtMoney(r.amount)} so&apos;m</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1 text-xs text-text-muted">
+                          <span>****{r.phoneLast4 || "—"}</span>
+                          <span>{r.sharePct.toFixed(2)}%</span>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="text-center text-sm text-text-muted p-3 rounded-lg bg-bg border border-border">Bu oy investorlarga taqsimot bo'lmagan</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card-elevated text-center py-12">
+              <p className="text-text-secondary text-sm">Hali taqsimotlar mavjud emas</p>
+              <p className="text-text-muted text-xs mt-1">Oylik foyda taqsimlangach bu yerda avtomatik ko'rinadi</p>
+            </div>
+          )}
         </div>
       )}
 

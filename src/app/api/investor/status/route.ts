@@ -126,6 +126,35 @@ export async function POST(req: NextRequest) {
         }
       : null;
 
+    const investorNameById = new Map(
+      allApps
+        .filter((a: any) => !!a.id)
+        .map((a: any) => [a.id, a.fullName || `Investor ${(a.phone || "").slice(-4)}`])
+    );
+
+    const distributionHistory = logEntries.map(([monthKey, entry]) => {
+      const recipients = (entry?.distributions ?? [])
+        .map((d: any) => ({
+          investorId: d.investorId,
+          fullName: investorNameById.get(d.investorId) || `Investor ${(d.phoneLast4 || "")}`,
+          phoneLast4: d.phoneLast4 || "",
+          amount: Number(d.amount) || 0,
+          sharePct: Number(d.sharePct) || 0,
+        }))
+        .sort((a: any, b: any) => b.amount - a.amount);
+
+      return {
+        monthKey,
+        distributedAt: entry?.distributedAt || "",
+        monthlyRevenue: Number(entry?.monthlyRevenue) || 0,
+        netRevenue: Number(entry?.netRevenue) || 0,
+        investorPool: Number(entry?.investorPoolDistributed ?? entry?.plannedInvestorPool) || 0,
+        creatorShare: Number(entry?.creatorShare) || 0,
+        investorCount: Number(entry?.investorCount) || recipients.length,
+        recipients,
+      };
+    });
+
     // Dashboard uchun taqsimot sanalari UZ vaqt (25-kun 08:00 UZ = 03:00 UTC)
     const uzNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tashkent" }));
     const uzDay = uzNow.getDate();
@@ -191,6 +220,7 @@ export async function POST(req: NextRequest) {
         totalDistributed,
         lastDistributionMonth,
         lastDistributionData,
+        distributionHistory,
         profitEligibleFrom,
         isEligibleThisCycle,
         contractId: appData.contractId,
