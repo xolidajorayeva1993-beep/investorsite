@@ -103,12 +103,43 @@ export async function POST(req: NextRequest) {
     const campaignTarget = Number(cfg.campaignTargetUzs) || 500_000_000;
     const campaignProgress = campaignTarget > 0 ? Math.min(100, (totalInvested / campaignTarget) * 100) : 0;
 
+    // Oxirgi taqsimot ma'lumotlari — distribution_log dan
+    const distributionLog = await store.getConfig("config", "distribution_log", {}) as Record<string, any>;
+    const logEntries = Object.entries(distributionLog)
+      .filter(([k]) => /^\d{4}-\d{2}$/.test(k))
+      .sort(([a], [b]) => b.localeCompare(a));
+    const lastLogEntry = logEntries.length > 0 ? logEntries[0][1] : null;
+    const lastDistributionMonth = logEntries.length > 0 ? logEntries[0][0] : "";
+    const myLastDistribution = lastLogEntry
+      ? (lastLogEntry.distributions ?? []).find((d: any) => d.investorId === appData.id)
+      : null;
+    const lastDistributionData = lastLogEntry
+      ? {
+          monthlyRevenue: lastLogEntry.monthlyRevenue ?? 0,
+          netRevenue: lastLogEntry.netRevenue ?? 0,
+          investorPool: lastLogEntry.investorPoolDistributed ?? lastLogEntry.plannedInvestorPool ?? 0,
+          creatorShare: lastLogEntry.creatorShare ?? 0,
+          myAmount: myLastDistribution ? (myLastDistribution.amount ?? 0) : 0,
+          mySharePct: myLastDistribution ? (myLastDistribution.sharePct ?? 0) : 0,
+          distributedAt: lastLogEntry.distributedAt ?? "",
+          investorCount: lastLogEntry.investorCount ?? 0,
+        }
+      : null;
+
     const now = new Date();
-    const nextDistributionDate = new Date(
-      now.getDate() >= 25 ? now.getFullYear() : now.getFullYear(),
-      now.getDate() >= 25 ? now.getMonth() + 1 : now.getMonth(),
-      25
-    ).toISOString();
+    // Keyingi taqsimot sanasi UZ vaqt (UTC+5: 25-kun 08:00 UZ = 03:00 UTC)
+    const uzNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tashkent" }));
+    const uzDay = uzNow.getDate();
+    const uzMonth = uzNow.getMonth(); // 0-based
+    const uzYear = uzNow.getFullYear();
+    const nextDistDate = uzDay >= 25
+      ? new Date(Date.UTC(uzMonth === 11 ? uzYear + 1 : uzYear, (uzMonth + 1) % 12, 25, 3, 0, 0))
+      : new Date(Date.UTC(uzYear, uzMonth, 25, 3, 0, 0));
+    const nextDistributionDate = nextDistDate.toISOString();
+
+    // Foyda olishga haqli sana (shu oyda foydaga kira oladimi)
+    const profitEligibleFrom = appData.profitEligibleFrom ?? null;
+    const isEligibleThisCycle = !profitEligibleFrom || new Date(profitEligibleFrom) <= nextDistDate;
 
     return NextResponse.json({
       ok: true,
@@ -151,7 +182,10 @@ export async function POST(req: NextRequest) {
         expenses: [],
         totalExpensesAmount: investorExpenseShareUzs,
         totalDistributed,
-        lastDistributionMonth: "",
+        lastDistributionMonth,
+        lastDistributionData,
+        profitEligibleFrom,
+        isEligibleThisCycle,
         contractId: appData.contractId,
         contractHash: appData.contractHash,
         contractSignedAt: appData.contractSignedAt,

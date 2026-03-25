@@ -98,8 +98,13 @@ type InvestorData = {
     netRevenue: number;
     investorPool: number;
     creatorShare: number;
+    myAmount: number;
+    mySharePct: number;
     distributedAt: string;
+    investorCount: number;
   };
+  profitEligibleFrom?: string | null;
+  isEligibleThisCycle?: boolean;
 };
 
 type InvestorListItem = {
@@ -929,44 +934,44 @@ export default function DashboardPage() {
 
           {/* Row 2: Daromad */}
           <div className="mt-4">
-            <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Daromad</div>
+            <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Daromad (joriy oy)</div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div className="stat-box">
-                <div className="stat-label">Umumiy daromad</div>
+                <div className="stat-label">Loyihalar jami daromad</div>
                 <div className="stat-value text-accent">{fmtShort(data.monthlyRevenueUzs)}</div>
-                <div className="text-xs text-text-muted mt-1">barcha loyihalardan</div>
+                <div className="text-xs text-text-muted mt-1">shu oy, barcha loyihalardan</div>
               </div>
               <div className="stat-box">
-                <div className="stat-label">Oylik toza daromad</div>
-                <div className="stat-value text-accent">{fmtShort(data.netMonthlyProfit || data.monthlyProfit)}</div>
-                <div className="text-xs text-text-muted mt-1">chegirmalar ayrilgan</div>
+                <div className="stat-label">Toza foyda (soliqsiz)</div>
+                <div className="stat-value text-accent">{fmtShort(data.netMonthlyRevenue || 0)}</div>
+                <div className="text-xs text-text-muted mt-1">chegirmalar ayrilgach</div>
               </div>
               <div className="stat-box">
-                <div className="stat-label">Shu oy kutilayotgan</div>
+                <div className="stat-label">Sizga to'lanadigan (taxmin)</div>
                 <div className="stat-value text-gold">{fmtShort(data.estimatedMonthlyProfit || 0)}</div>
-                <div className="text-xs text-text-muted mt-1">taxminiy</div>
+                <div className="text-xs text-text-muted mt-1">25-sana pul olasiz</div>
               </div>
             </div>
           </div>
 
           {/* Row 3: Soliq va taqsimot */}
           <div className="mt-4">
-            <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Soliq va taqsimot</div>
+            <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Chegirmalar va to'lovlar tarixi</div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div className="stat-box">
-                <div className="stat-label">Umumiy soliqlar</div>
+                <div className="stat-label">Chegirmalar stavkasi</div>
                 <div className="stat-value text-danger">{data.totalDeductionPct || 0}%</div>
-                <div className="text-xs text-text-muted mt-1">{fmtShort(Math.round(data.monthlyRevenueUzs * (data.totalDeductionPct || 0) / 100))} so&apos;m/oy</div>
+                <div className="text-xs text-text-muted mt-1">soliq + xarajatlar</div>
               </div>
               <div className="stat-box">
-                <div className="stat-label">Oylik soliqlar</div>
+                <div className="stat-label">Shu oy chegirmalar</div>
                 <div className="stat-value text-danger">{fmtShort(Math.round(data.monthlyRevenueUzs * (data.totalDeductionPct || 0) / 100))}</div>
-                <div className="text-xs text-text-muted mt-1">so&apos;m</div>
+                <div className="text-xs text-text-muted mt-1">so&apos;m yechiladi</div>
               </div>
               <div className="stat-box">
-                <div className="stat-label">Taqsimlangan daromad</div>
+                <div className="stat-label">Sizga jami to'langan</div>
                 <div className="stat-value text-green">{fmtShort(data.totalDistributed || 0)}</div>
-                <div className="text-xs text-text-muted mt-1">jami</div>
+                <div className="text-xs text-text-muted mt-1">barcha oylar uchun</div>
               </div>
             </div>
           </div>
@@ -1019,26 +1024,67 @@ export default function DashboardPage() {
               <div>
                 <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Keyingi taqsimot</div>
                 <div className="text-lg font-bold mt-1">{data.nextDistributionDate ? formatDate(data.nextDistributionDate) : "—"}</div>
-                <div className="text-xs text-text-muted mt-0.5">Har oyning 25-sanasi soat 08:00 da avtomatik</div>
+                <div className="text-xs text-text-muted mt-0.5">Har oyning 25-sanasi soat 08:00 (UZ) avtomatik</div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-text-muted">Yillik ROI</div>
                 <div className="text-2xl font-bold text-gold">{roi.toFixed(1)}%</div>
               </div>
             </div>
+
+            {/* Shu sikldagi holat */}
+            <div className="mt-3 pt-3 border-t border-border-light">
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                data.isEligibleThisCycle === false
+                  ? "bg-gold/10 text-gold"
+                  : "bg-green/10 text-green"
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  data.isEligibleThisCycle === false ? "bg-gold" : "bg-green"
+                }`} />
+                {data.isEligibleThisCycle === false
+                  ? `Keyingi oydan foydaga kiradi (${data.profitEligibleFrom ? formatDate(data.profitEligibleFrom) : "—"})`
+                  : "Shu oygi taqsimotga qo'shiladi"}
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-xs text-text-muted">Shu oygi taxminiy to'lovingiz:</span>
+                <span className="font-mono font-bold text-gold">
+                  {data.isEligibleThisCycle === false ? "—" : fmtMoney(data.estimatedMonthlyProfit || 0) + " so'm"}
+                </span>
+              </div>
+            </div>
+
+            {/* Oxirgi taqsimot detallari */}
             {data.lastDistributionMonth && data.lastDistributionData && (
               <div className="mt-3 pt-3 border-t border-border-light">
-                <div className="text-xs text-text-muted mb-2">Oxirgi taqsimot: {data.lastDistributionMonth}</div>
+                <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Oxirgi taqsimot: {data.lastDistributionMonth}</div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex justify-between p-2 rounded bg-bg border border-border">
-                    <span className="text-text-muted">Oylik daromad</span>
+                    <span className="text-text-muted">Loyihalar daromadi</span>
                     <span className="font-mono font-bold">{fmtShort(data.lastDistributionData.monthlyRevenue)}</span>
                   </div>
                   <div className="flex justify-between p-2 rounded bg-bg border border-border">
-                    <span className="text-text-muted">Toza summa</span>
+                    <span className="text-text-muted">Soliqdan keyin</span>
                     <span className="font-mono font-bold text-green">{fmtShort(data.lastDistributionData.netRevenue)}</span>
                   </div>
+                  <div className="flex justify-between p-2 rounded bg-bg border border-border">
+                    <span className="text-text-muted">Investorlarga</span>
+                    <span className="font-mono font-bold text-accent">{fmtShort(data.lastDistributionData.investorPool)}</span>
+                  </div>
+                  <div className="flex justify-between p-2 rounded bg-bg border border-border">
+                    <span className="text-text-muted">Ishtirokchilar</span>
+                    <span className="font-mono font-bold">{data.lastDistributionData.investorCount} kishi</span>
+                  </div>
                 </div>
+                {data.lastDistributionData.myAmount > 0 && (
+                  <div className="mt-2 flex justify-between items-center p-3 rounded-lg bg-green/5 border border-green/20">
+                    <span className="text-sm font-bold text-green">Sizga o'tkazildi</span>
+                    <span className="font-mono font-bold text-green">{fmtMoney(data.lastDistributionData.myAmount)} so'm</span>
+                  </div>
+                )}
+                {data.lastDistributionData.distributedAt && (
+                  <div className="text-xs text-text-muted mt-2 text-right">{formatDateTime(data.lastDistributionData.distributedAt)}</div>
+                )}
               </div>
             )}
           </div>
@@ -1048,7 +1094,7 @@ export default function DashboardPage() {
             <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-4">Daromad taqsimoti tafsiloti</div>
             <div className="space-y-2">
               <div className="flex justify-between items-center p-3 rounded-lg bg-bg border border-border">
-                <span className="text-sm text-text-muted">Oylik jami daromad</span>
+                <span className="text-sm text-text-muted">Loyihalar jami daromadi (joriy oy)</span>
                 <span className="font-mono font-bold">{fmtMoney(data.monthlyRevenueUzs)} so&apos;m</span>
               </div>
 
@@ -1095,13 +1141,16 @@ export default function DashboardPage() {
                 <span className="text-sm text-text-muted">Investorlar fondiga ({data.investorPoolPct}%)</span>
                 <span className="font-mono font-bold text-accent">{fmtMoney(Math.round((data.netMonthlyRevenue || data.monthlyRevenueUzs) * data.investorPoolPct / 100))} so&apos;m</span>
               </div>
-              <div className="flex justify-between items-center p-3 rounded-lg bg-bg border border-accent/30">
-                <span className="text-sm text-text-muted">Sizning ulushingiz ({data.poolSharePct.toFixed(2)}%)</span>
-                <span className="font-mono font-bold text-accent">{fmtMoney(data.netMonthlyProfit || data.monthlyProfit)} so&apos;m</span>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-accent/5 border border-accent/30">
+                <div>
+                  <span className="text-sm font-bold text-accent">Sizga to'lanadigan (taxmin)</span>
+                  <div className="text-xs text-text-muted mt-0.5">{data.poolSharePct.toFixed(2)}% ulush × 80% fond</div>
+                </div>
+                <span className="font-mono font-bold text-accent text-lg">{fmtMoney(data.estimatedMonthlyProfit || data.netMonthlyProfit || data.monthlyProfit)} so&apos;m</span>
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-border-light flex justify-between text-sm">
-              <span className="text-text-muted">Yillik prognoz</span>
+              <span className="text-text-muted">Yillik prognoz (12 oy)</span>
               <span className="font-mono font-bold text-gold">{fmtMoney(data.netYearlyProfit || data.yearlyProfit)} so&apos;m</span>
             </div>
           </div>
@@ -1110,9 +1159,12 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
             {/* Balans */}
             <div className="card-elevated">
-              <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Balans</div>
+              <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Balans (yechishga tayyor)</div>
               <div className="text-2xl font-bold text-green">{fmtMoney(data.balance || 0)} <span className="text-sm font-normal text-text-muted">so&apos;m</span></div>
-              <p className="text-xs text-text-muted mt-2">Pul yechish yoki reinvest qilish mumkin</p>
+              <p className="text-xs text-text-muted mt-2">Bu yerda 25-sana o'tkazilgan foydalar yig'iladi. Yechib olish yoki qayta investitsiya qilish mumkin.</p>
+              {data.totalWithdrawn > 0 && (
+                <p className="text-xs text-text-muted mt-1">Jami yechib olingan: <span className="font-bold">{fmtMoney(data.totalWithdrawn)} so'm</span></p>
+              )}
               <button onClick={() => setActiveTab("balance")} className="text-xs text-accent hover:underline mt-2 block">Batafsil →</button>
             </div>
 
