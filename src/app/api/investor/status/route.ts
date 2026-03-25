@@ -126,20 +126,27 @@ export async function POST(req: NextRequest) {
         }
       : null;
 
-    const now = new Date();
-    // Keyingi taqsimot sanasi UZ vaqt (UTC+5: 25-kun 08:00 UZ = 03:00 UTC)
+    // Dashboard uchun taqsimot sanalari UZ vaqt (25-kun 08:00 UZ = 03:00 UTC)
     const uzNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tashkent" }));
     const uzDay = uzNow.getDate();
     const uzMonth = uzNow.getMonth(); // 0-based
     const uzYear = uzNow.getFullYear();
-    const nextDistDate = uzDay >= 25
-      ? new Date(Date.UTC(uzMonth === 11 ? uzYear + 1 : uzYear, (uzMonth + 1) % 12, 25, 3, 0, 0))
+    const uzHour = uzNow.getHours();
+    const distributionAlreadyRanThisMonth = uzDay > 25 || (uzDay === 25 && uzHour >= 8);
+
+    const currentCycleDistributionDate = distributionAlreadyRanThisMonth
+      ? new Date(Date.UTC(uzYear, uzMonth, 25, 3, 0, 0))
       : new Date(Date.UTC(uzYear, uzMonth, 25, 3, 0, 0));
+
+    const nextDistDate = distributionAlreadyRanThisMonth
+      ? new Date(Date.UTC(uzMonth === 11 ? uzYear + 1 : uzYear, (uzMonth + 1) % 12, 25, 3, 0, 0))
+      : currentCycleDistributionDate;
     const nextDistributionDate = nextDistDate.toISOString();
 
-    // Foyda olishga haqli sana (shu oyda foydaga kira oladimi)
+    // Foyda olishga haqli sana (hozirgi yakunlanayotgan siklga kira oladimi)
     const profitEligibleFrom = appData.profitEligibleFrom ?? null;
-    const isEligibleThisCycle = !profitEligibleFrom || new Date(profitEligibleFrom) <= nextDistDate;
+    const isEligibleThisCycle = !profitEligibleFrom || new Date(profitEligibleFrom) <= currentCycleDistributionDate;
+    const estimatedMonthlyProfit = isEligibleThisCycle ? netMonthlyProfit : 0;
 
     return NextResponse.json({
       ok: true,
@@ -173,7 +180,7 @@ export async function POST(req: NextRequest) {
         transactions,
         canWithdraw: (Number(appData.balance) || 0) > 0,
         nextDistributionDate,
-        estimatedMonthlyProfit: netMonthlyProfit,
+        estimatedMonthlyProfit,
         deductions,
         totalDeductionPct,
         netMonthlyRevenue,
