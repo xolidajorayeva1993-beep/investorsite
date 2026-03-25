@@ -8,8 +8,31 @@ import { db } from "@/lib/firebase-admin";
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 const VALID_STATUSES = ["pending", "approved", "payment_uploaded", "active", "rejected"];
 const DEFAULT_DEDUCTIONS = { taxPercent: 12, commissionPercent: 2, serverCostPercent: 3, otherPercent: 0 };
+const UZ_TZ = "Asia/Tashkent";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+function getUzDateParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: UZ_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day),
+  };
+}
+
+function getUzDistributionDateIso(year: number, month1to12: number): string {
+  // Uzbekistan UTC+5, 08:00 UZ = 03:00 UTC
+  return new Date(Date.UTC(year, month1to12 - 1, 25, 3, 0, 0)).toISOString();
+}
 
 function auth(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret") || "";
@@ -106,10 +129,11 @@ export async function POST(req: NextRequest) {
     if (!app) return NextResponse.json({ error: "Investor topilmadi" }, { status: 404 });
     if (app.status !== "payment_uploaded") return NextResponse.json({ error: "Faqat chek yuborilgan arizalarni tasdiqlash mumkin" }, { status: 400 });
     const now = new Date();
-    const day = now.getDate();
-    const profitEligibleFrom = day > 20
-      ? new Date(now.getFullYear(), now.getMonth() + 1, 25).toISOString()
-      : new Date(now.getFullYear(), now.getMonth(), 25).toISOString();
+    const uzNow = getUzDateParts(now);
+    const mustStartNextMonth = uzNow.day >= 20;
+    const targetYear = mustStartNextMonth && uzNow.month === 12 ? uzNow.year + 1 : uzNow.year;
+    const targetMonth = mustStartNextMonth ? (uzNow.month % 12) + 1 : uzNow.month;
+    const profitEligibleFrom = getUzDistributionDateIso(targetYear, targetMonth);
     const txId = `TX-${Date.now().toString(36).toUpperCase()}`;
     const notifId = `NOTIF-${Date.now().toString(36).toUpperCase()}`;
     const nowStr = now.toISOString();
@@ -232,35 +256,50 @@ export async function POST(req: NextRequest) {
     const ded = await store.getConfig("config", "deductions", { ...DEFAULT_DEDUCTIONS });
     const totalDeductionPct = (Number(ded.taxPercent) || 0) + (Number(ded.commissionPercent) || 0) + (Number(ded.serverCostPercent) || 0) + (Number(ded.otherPercent) || 0);
     const netRevenue = Math.round(monthlyRevenue * (1 - totalDeductionPct / 100));
-    const investorPool = Math.round(netRevenue * INVESTOR_POOL_PCT / 100);
+    const plannedInvestorPool = Math.round(netRevenue * INVESTOR_POOL_PCT / 100);
     const eligibleApps = activeApps.filter((a: any) => !a.profitEligibleFrom || new Date(a.profitEligibleFrom) <= now);
     const totalEligibleInvested = eligibleApps.reduce((s: number, a: any) => s + (Number(a.investmentAmountUzs) || 0), 0);
-    if (totalEligibleInvested <= 0) return NextResponse.json({ error: "Foyda olish huquqiga ega investorlar yo'q" }, { status: 400 });
     const distributions: any[] = [];
     const batch = db.batch();
-    for (const app of eligibleApps) {
-      const sharePct = (Number(app.investmentAmountUzs) || 0) / totalEligibleInvested;
-      const profitAmount = Math.round(investorPool * sharePct);
-      if (profitAmount <= 0) continue;
-      const txId = `TX-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 4)}`;
-      batch.update(db.collection("applications").doc(app.id), { balance: (Number(app.balance) || 0) + profitAmount, _updatedAt: distributionDate });
-      batch.set(db.collection("transactions").doc(txId), {
-        id: txId, investorId: app.id, type: "profit", amount: profitAmount,
-        description: `Oylik foyda  ${(sharePct * INVESTOR_POOL_PCT).toFixed(2)}% ulush`,
-        createdAt: distributionDate, _createdAt: distributionDate, _updatedAt: distributionDate,
-      });
-      distributions.push({ investorId: app.id, phoneLast4: (app.phone || "").slice(-4), amount: profitAmount, sharePct: sharePct * 100 });
+    let investorPoolDistributed = 0;
+    if (totalEligibleInvested > 0) {
+      for (const app of eligibleApps) {
+        const sharePct = (Number(app.investmentAmountUzs) || 0) / totalEligibleInvested;
+        const profitAmount = Math.round(plannedInvestorPool * sharePct);
+        if (profitAmount <= 0) continue;
+        const txId = `TX-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 4)}`;
+        batch.update(db.collection("applications").doc(app.id), { balance: (Number(app.balance) || 0) + profitAmount, _updatedAt: distributionDate });
+        batch.set(db.collection("transactions").doc(txId), {
+          id: txId, investorId: app.id, type: "profit", amount: profitAmount,
+          description: `Oylik foyda ${(sharePct * INVESTOR_POOL_PCT).toFixed(2)}% ulush`,
+          createdAt: distributionDate, _createdAt: distributionDate, _updatedAt: distributionDate,
+        });
+        distributions.push({ investorId: app.id, phoneLast4: (app.phone || "").slice(-4), amount: profitAmount, sharePct: sharePct * 100 });
+        investorPoolDistributed += profitAmount;
+      }
     }
+    const creatorShare = Math.max(0, netRevenue - investorPoolDistributed);
+    const creatorTxId = `TX-${Date.now().toString(36).toUpperCase()}CR`;
+    batch.set(db.collection("transactions").doc(creatorTxId), {
+      id: creatorTxId,
+      investorId: "CREATOR",
+      type: "creator_profit",
+      amount: creatorShare,
+      description: `Asoschi ulushi (${totalEligibleInvested > 0 ? "qoldiq + 20%" : "100%"})`,
+      createdAt: distributionDate,
+      _createdAt: distributionDate,
+      _updatedAt: distributionDate,
+    });
     const notifId = `NOTIF-${Date.now().toString(36).toUpperCase()}`;
     batch.set(db.collection("notifications").doc(notifId), {
       id: notifId, type: "profit_distributed", title: "Oylik foyda taqsimlandi",
-      message: `${new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" })} oyi foyda (${investorPool.toLocaleString()} so'm) ${distributions.length} ta investorga taqsimlandi.`,
+      message: `${new Date().toLocaleDateString("uz-UZ", { month: "long", year: "numeric" })} oyi: investorlar ${investorPoolDistributed.toLocaleString()} so'm (${distributions.length} kishi), asoschi ${creatorShare.toLocaleString()} so'm.`,
       createdAt: distributionDate, readBy: [], _createdAt: distributionDate, _updatedAt: distributionDate,
     });
     await batch.commit();
     return NextResponse.json({
-      ok: true, message: `Foyda taqsimlandi: ${netRevenue.toLocaleString()} (toza), investorlar ${investorPool.toLocaleString()}, ${distributions.length} kishi`,
-      data: { distributions, totalDistributed: investorPool, netRevenue, totalDeductionPct },
+      ok: true, message: `Foyda taqsimlandi: ${netRevenue.toLocaleString()} (toza), investorlar ${investorPoolDistributed.toLocaleString()}, asoschi ${creatorShare.toLocaleString()}`,
+      data: { distributions, totalDistributed: investorPoolDistributed, creatorShare, netRevenue, totalDeductionPct },
     });
   }
 

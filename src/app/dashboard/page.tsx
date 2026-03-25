@@ -395,11 +395,6 @@ export default function DashboardPage() {
     fetchNotifications();
     // Fetch owner settings for contract display
     fetch("/api/owner").then(r => r.json()).then(d => { if (d.success && d.owner) setOwner(d.owner); }).catch(() => {});
-    // Avtomatik foyda taqsimlash: 25-sanada cron endpointni chaqirish
-    const day = new Date().getDate();
-    if (day >= 25) {
-      fetch("/api/cron/distribute", { headers: { "x-cron-secret": "auto" } }).catch(() => {});
-    }
   }, [authLogin, authPassword, data, fetchInvestorsList, fetchExpenses, fetchNotifications]);
 
   /* ── Vote on expense ── */
