@@ -542,31 +542,11 @@ export default function DashboardPage() {
   };
 
   /* ── Add investment ── */
-  const handleAddInvestment = async (e: React.FormEvent) => {
+  const handleAddInvestment = (e: React.FormEvent) => {
     e.preventDefault();
-    setAddLoading(true);
-    setAddMsg("");
-    try {
-      const res = await fetch("/api/investor/add-investment", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          login: authLogin,
-          password: authPassword,
-          amount: Number(addAmount),
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error || "Xatolik");
-      setAddMsg(json.message);
-      setAddAmount("");
-      setShowAddForm(false);
-      await refreshData();
-    } catch (err) {
-      setAddMsg(err instanceof Error ? err.message : "Xatolik");
-    } finally {
-      setAddLoading(false);
-    }
+    setAddMsg("Bu bo'lim vaqtincha ishlamayapti. Kelajakda bu yerga to'lov tizimlarini integratsiya qilamiz.");
+    setShowAddForm(false);
+    setAddAmount("");
   };
 
   /* ── Logout ── */
@@ -1935,13 +1915,13 @@ export default function DashboardPage() {
               <p className="text-sm text-text-secondary mb-5">Ulushingizni oshiring. Minimal: 100,000 so&apos;m.</p>
               <div className="flex flex-wrap justify-center gap-2 mb-5">
                 {[1_000_000, 5_000_000, 10_000_000, 25_000_000, 50_000_000].map((amt) => (
-                  <button key={amt} onClick={() => { setAddAmount(String(amt)); setShowAddForm(true); }}
+                  <button key={amt} onClick={() => { setAddMsg("Bu bo'lim vaqtincha ishlamayapti. Kelajakda bu yerga to'lov tizimlarini integratsiya qilamiz."); setShowAddForm(false); setAddAmount(""); }}
                     className="calc-preset">
                     + {fmtShort(amt)}
                   </button>
                 ))}
               </div>
-              <button onClick={() => setShowAddForm(true)} className="btn-primary">
+              <button onClick={() => { setAddMsg("Bu bo'lim vaqtincha ishlamayapti. Kelajakda bu yerga to'lov tizimlarini integratsiya qilamiz."); setShowAddForm(false); setAddAmount(""); }} className="btn-primary">
                 Boshqa miqdor kiritish
               </button>
             </div>
@@ -1976,7 +1956,7 @@ export default function DashboardPage() {
                 )}
                 <div className="flex gap-3">
                   <button type="submit" disabled={addLoading || !addAmount || Number(addAmount) < 100_000} className="btn-primary flex-1 py-3 disabled:opacity-40">
-                    {addLoading ? "Saqlanmoqda..." : "Investitsiyani tasdiqlash"}
+                    {addLoading ? "Saqlanmoqda..." : "Investitsiya kiritish (tez kunda)"}
                   </button>
                   <button type="button" onClick={() => { setShowAddForm(false); setAddAmount(""); }} className="btn-secondary py-3">Bekor</button>
                 </div>
